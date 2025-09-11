@@ -1,0 +1,102 @@
+\section{Related Work}
+\label{sec:rw}
+In this section, we discuss sanitizers for CPU programs. We already reviewed
+highly relevant GPU sanitizers in \S~\ref{subsec:first_rw}.
+%
+Extensive efforts have been devoted to developing efficient and effective
+sanitizers for CPU memory safety. One of the most widely used sanitizers is
+ASan~\cite{asan}. ASan allocates \textit{shadow memory} to track the memory
+status and instruments the program to prevent invalid memory access. A major
+drawback of this approach is a performance overhead of approximately
+100\%~\cite{asan}. To reduce this overhead, various improvements have been
+proposed. For example, ASan-{}-~\cite{asanmin} reduces ASan's overhead by
+removing redundant checks. Specifically, ASan-{}- leverages static analysis to
+identify and remove the redundant checks of ASan, achieving a performance
+improvement of 30\% to 60\%. RSan~\cite{rsan} introduces an efficient redzone
+scheme that can check ranges of memory to improve performance. Since ASan's
+overhead primarily stems from instrumentation, researchers have also explored
+sanitizer designs that rely on hardware
+features~\cite{mtsan,dangzero,pacsan,floatzone}. MTSan~\cite{mtsan} utilizes
+emerging memory tagging features in Arm to track memory status for
+closed-source software. PACSan~\cite{pacsan} employs a similar hardware feature
+named pointer authentication in Arm to tag pointers. Beyond memory tagging,
+hardware acceleration has also been applied to common sanitizer operations. For
+instance, \citet{floatzone} proposed FloatZone, which repurposes the
+floating-point unit to accelerate bound checking.
+DangZero~\cite{dangzero} achieves efficient UAF detection by delegating the
+memory management to the sanitizer.
+
+\section{Discussion}
+\label{sec:disc}
+
+\parh{Unsupported memory.}~Though \tool supports most of the memory types
+in the NVIDIA GPUs~(i.e., local, global, and shared memory), it does not
+support two rarely used memory APIs, dynamic shared memory and in-kernel
+\texttt{malloc}. Dynamic shared memory allows the host to dynamically
+allocate a part of the shared memory before kernel launch. Since its allocation
+is exclusively managed by the NVIDIA's proprietary runtime via a unique kernel
+launch syntax~(i.e.,
+\texttt{<{}<{}<dim\textsubscript{grid},dim\textsubscript{blk},size\textsubscript{shared}>{}>{}>}),
+\tool cannot intercept the allocation to associate metadata. In-kernel
+\texttt{malloc} enables CUDA kernels to allocate global memory directly. Due to
+similar challenges in intercepting such allocations, \tool does not support this feature. Fortunately, these two
+features are rarely used in practice. Shared memory is very limited in
+size~(for example, 64\,KiB) where static allocation is sufficient. As for
+in-kernel \texttt{malloc}, it incurs a significant performance
+penalty~\cite{kernelmalloc} compared to its host-side counterpart~(i.e.,
+\texttt{cudaMalloc}), and is therefore seldom used.
+
+\parh{Closed-source modules.}~Since \tool is designed as a LLVM pass in the
+compiler's frontend, it cannot instrument closed-source modules. In the current
+CUDA ecosystem, a significant portion of such modules comprises NVIDIA's
+proprietary libraries, such as \texttt{cuDNN} and \texttt{cuBLAS}~\cite{cudnn}.
+However, these libraries are highly optimized and extensively tested, making
+the likelihood of memory bugs low. In addition, open-source alternatives exist,
+such as \texttt{MAGMA} and \texttt{ArrayFire}~\cite{magma,arrayfire}.
+
+\parh{Other platforms.} Though \tool is designed for NVIDIA GPUs, the underlying mechanism of \tool
+does not depend on features specific to NVIDIA GPUs. Modern GPUs from other
+vendors~(e.g., AMD, Intel and Apple) also support MMUs, making them viable
+platforms for implementing \tool. However, the openness of GPU APIs varies
+across vendors. For example, AMD provides an open-source CUDA-like API named
+HIP~\cite{hip}, which could facilitate a swift port of \tool to AMD GPUs. In
+contrast, Intel and Apple are more restrictive regarding their GPU APIs,
+particularly low-level memory management APIs that \tool requires. This
+presents challenges for porting \tool to those platforms. Nonetheless, since
+low-level memory control is essential for high-performance computing, we expect
+that other vendors will eventually expose such APIs.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+\tool is the first practical GPU memory sanitizer that comprehensively detects
+both spatial and temporal errors on commodity NVIDIA GPUs. It leverages only
+off-the-shelf hardware and open toolchains. By combining pointer tagging with
+in-band metadata, it ensures precise and low-overhead memory safety. Evaluated
+on diverse benchmarks and LLMs, \tool achieves full detection coverage with
+13\% runtime overhead and minimal memory use.
+
+\appendix
+\section*{Ethical Considerations}
+This paper introduces a software-based memory safety solution for commodity
+NVIDIA GPUs, aiming to improve system reliability and security without causing
+harm. All experiments were conducted locally using synthetic data, eliminating
+any risks to personal privacy or public services. Our approach involves no
+attack vectors against existing CUDA programs or NVIDIA GPUs, ensuring no risk
+to the CUDA ecosystem or NVIDIA's interests.
+%
+We carefully conducted fair and reproducible comparisons between \tool and
+competing systems by using identical software and hardware configurations,
+maintaining equalized baselines, and reporting results based on the average of
+multiple runs.
+
+These practices align with ethical principles of beneficence, respect for
+persons, and justice, ensuring that our research advances knowledge while
+safeguarding privacy, fairness, and the integrity of existing systems.
+
+\section*{Open Science}
+We confirm that the submitted paper follows the open science policy of USENIX
+Security' 26. The source code of \tool~(LLVM pass, dynamic linking library, and
+all benchmarks) is publicly available at an anonymous site~\cite{cusan}. We will
+continue to maintain the source code for future research after the paper is
+accepted.

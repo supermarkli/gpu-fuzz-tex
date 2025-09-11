@@ -1,0 +1,452 @@
+\section{Design of \tool}
+\label{sec:design}
+
+\subsection{\tool Overview}
+\label{subsec:overview}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.8\linewidth]{figs/overview.pdf}
+	\caption{Overview of \tool.}
+	\label{fig:overview}
+\end{figure}
+
+As described in \S~\ref{sec:tm}, existing GPU sanitizers face the problems of
+high overhead, deployment challenges, and insufficient coverage. \tool instead
+leverages a novel scheme to deliver accurate and efficient detection of GPU
+memory corruption on commodity GPUs. Essentially, \tool detects GPU memory
+corruption via compiler-inserted checks, which require no hardware modification
+or proprietary software, and therefore are deployable on commodity GPUs.
+
+\parh{Workflow.}~As shown in \F~\ref{fig:overview}, \tool consists of two
+components: a memory allocator~(\ding{192}\ding{193}) and compiler-based
+instrumentation~(\ding{194}\ding{195}). The memory allocator is responsible for
+allocating memory buffers with in-band metadata~(\ding{192}) and constructing
+tagged pointers for the GPU programs~(\ding{193}). To utilize these two pieces
+of metadata for corruption detection, \tool inserts instructions into the GPU
+programs via compiler-based instrumentation. Specifically, \tool inserts checks
+before each pointer dereference to verify the validity of each memory
+access~(\ding{194}). Additionally, \tool also inserts instructions to update
+the metadata when necessary~(\ding{195}). In this workflow, the key aspect is
+the design of \tool's metadata, which determines the accuracy and efficiency of
+the detection. We now discuss this in detail.
+
+\parh{\tool's metadata.}~As described above, \tool attaches metadata to two
+types of entities: \textit{pointers} and \textit{buffers}. For buffers, \tool's
+memory allocator aggregates the buffers of the same $2^n$-aligned size~(e.g.,
+16\,B) into the same VA range~(e.g., \texttt{[0x1..000,0x1..fff]}), so that
+their VAs are automatically aligned and tagged with the same alignment tag.
+Additionally, \tool's allocator prepends each buffer with its exact bound to
+enable more accurate bound checking. To retrieve this exact bound, \tool
+utilizes the information encoded in the pointer's alignment tag to clear the
+lower $n$ bits of the pointer, which automatically resets the pointer to the
+beginning of the buffer, where the exact bound resides.
+
+Notably, this in-band metadata retrieval offers a key advantage for GPU
+applications: \textit{when multiple GPU threads access the different parts of
+  the same buffer~(e.g., in a parallel for-loop), the GPU can broadcast the
+  result of metadata retrieval to all threads, incurring only one extra memory
+transaction.} This avoids the significant performance overhead of the shadow
+memory scheme, which incurs multiple memory transactions for each thread, as
+they each access a different shadow address to retrieve the metadata.
+
+\begin{table}[htbp]
+	\caption{Metadata of \tool.}
+	\label{tab:meta}
+	\centering
+	\resizebox{.85\linewidth}{!}{
+		\begin{tabular}{lcr}
+			\hline
+			\textbf{Entity}          & \textbf{Properties}                                                    & \textbf{Metadata}                                                                   \\ \hline
+			\multirow{3}{*}{Pointer} & \begin{tabular}[c]{@{}c@{}}Validity\\ (no overflow)\end{tabular}       & $2^n$-aligned size                                                                  \\ \cline{2-3}
+			                         & \begin{tabular}[c]{@{}c@{}}Type\\ (global/local)\end{tabular}          & Pointer type bit                                                                    \\ \cline{2-3}
+			                         & \begin{tabular}[c]{@{}c@{}}Identity\\ (bind ptr. to buf.)\end{tabular} & \begin{tabular}[c]{@{}r@{}}Stack epoch (local)\\ Randomized VA(global)\end{tabular} \\ \hline
+			Buffer                   & Bound \& liveness                                                      & In-band exact bounds                                                                \\ \hline
+		\end{tabular}
+	}
+\end{table}
+
+Aside from its friendliness to GPU applications, \tool's metadata design also
+comprehensively captures both spatial and temporal properties of a memory
+buffer, and encodes them into the appropriate locations within the pointers and
+buffers. \T~\ref{tab:meta} summarizes these essential properties and how they
+are stored by \tool. As shown in \T~\ref{tab:meta}, \tool embeds three pieces
+of metadata into the pointers: (1) the $2^n$-aligned size, which is used to
+retrieve the exact bounds and to ensure the pointer is still valid, i.e., not
+tampered with by pointer arithmetics; (2) the local/global type bit, which is
+used to distinguish local pointers from global pointers; (3) stack
+epoch/randomized VA, which ensures the pointer is \textit{not} pointing to a
+freed yet reallocated buffer. These three pieces of metadata comprehensively
+describe the properties of the pointer~(i.e., validity, type, and identity).
+%
+As for the buffer side, \tool only embeds its exact bounds at its beginning.
+These bounds serve two purposes. First, they help validate whether the
+memory access is within the bounds of the buffer, which provides a more
+accurate check than the $2^n$-aligned size. Second, they enable
+tracking the liveness property of a buffer. Upon deallocation, \tool clears the
+exact bounds of the buffer to zero, which causes all subsequent accesses to the
+buffer to fail.
+
+The remainder of \S~\ref{sec:design} is organized as follows.
+\S~\ref{subsec:spatial_meta} and \S~\ref{subsec:temporal_meta} detail how \tool
+detects spatial and temporal corruption, respectively. \S~\ref{subsec:opt} then
+discusses the optimizations adopted by \tool to eliminate redundant checks and
+improve performance.
+
+\subsection{Spatial Corruption Detection}
+\label{subsec:spatial_meta}
+
+In this section, we discuss how \tool encodes metadata to track the spatial
+information of the allocated buffers. We also discuss how
+\tool prevents overflowed pointer arithmetics from corrupting the metadata.
+
+\parh{Alignment tagging.}~As described in \S~\ref{subsec:overview}, \tool tags
+alignment information into the pointer to retrieve metadata and validate
+pointer arithmetics. Illustrated in \F~\ref{fig:ptrlayout}, \tool stores the
+alignment information in the bits [46:41] for global pointers and bits [53:48]
+for local pointers. The difference in the tagged bits is primarily due to the
+limitation of the CUDA runtime, which fixes the bits [63:47] of global pointers
+to be zero\footnote{VAs violating this limitation are treated as ``invalid
+value'' by CUDA runtime; this is a software constraint, as modern GPUs~(e.g.,
+RTX 5090) support 57-bit VA.}. As a result, bits [63:47] cannot be used to
+store alignment information for global pointers. For local pointers, meanwhile,
+bits [46:0] are managed by the NVIDIA runtime, where we can only optionally
+zero the lower bits via \texttt{align n} attribute. Therefore, \tool uses the
+bits [53:48] to store the alignment information of local pointers. Finally, to
+distinguish local pointers from global pointers, \tool sets bit 47 of local
+pointers to one, leveraging the fact that this bit is fixed to zero for global
+pointers. We use the same length of 6 bits for both global and local pointers,
+encoding the buffer size in a logarithmic manner. For example, if the buffer
+size is 64 bytes, the alignment bits would be $log(64)-3=3$. In this setup, the
+minimal buffer size is 16 bytes~(tag = 1), and the maximum buffer size is
+$2^{66}$ bytes~(tag = 63), which is more than sufficient for current GPU
+applications. Lastly, some additional bits~(i.e., [63:54]) are reserved for
+pointers to uniquely identify the buffer they point to, avoiding metadata
+confusion caused by memory reallocation.~(see \S~\ref{subsec:temporal_meta}).
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.6\linewidth]{figs/ptrlayout.pdf}
+	\caption{\tool pointer tagging format.}
+	\label{fig:ptrlayout}
+\end{figure}
+
+\parh{In-band exact bounds.}~Some prior work like LMI directly uses the
+$2^n$-aligned tagging for corruption detection. The main drawback of this
+approach is that it misses all out-of-bound~(OOB) access that occur within the
+$2^n$ alignment but outside the precise bounds of the allocated buffer. Though
+such OOBs may seem minor, since they simply access padding data, recent studies
+show that feeding invalid data during ML training can cause performance
+degradation or even compromise the security properties of the trained
+model~\cite{bitflip1,bitflip2,mistrain1,mistrain2}. To address this issue,
+\tool stores the exact size of the buffer in its padding area for accurate
+bounds checking. \F~\ref{fig:exact} demonstrates the allocation process of a
+buffer in \tool. As shown in \F~\ref{fig:exact}, when allocating a buffer,
+\tool first prepends it with 8 bytes of metadata to store its \textit{exact}
+size~(e.g., for a 20-byte buffer in the figure). Then, \tool aligns the VA of
+the buffer to the nearest $2^n$ boundary, to ensure that the metadata can be
+retrieved via the tagged pointer.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.8\linewidth]{figs/exact.pdf}
+	\caption{Metadata of exact size.}
+	\label{fig:exact}
+\end{figure}
+
+Specifically, retrieval is done by clearing the lower $n$ bits of the pointer
+according to its $2^n$-aligned tag. As \F~\ref{fig:retri} illustrates,
+regardless of the original pointer's specific location within the buffer, \tool
+always uses the embedded \texttt{tag} to zero out the lower bits of the
+pointer~(corresponding to the ``offset'' in \F~\ref{fig:retri}). Since the
+in-band metadata is allocated at the beginning of each buffer, this operation
+automatically redirects the pointer point to the in-band metadata. Then, \tool
+uses the exact size stored in the metadata to accurately verify if the memory
+access is within the bounds.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.5\linewidth]{figs/retri.pdf}
+	\caption{Retrieving exact size from pointer.}
+	\label{fig:retri}
+\end{figure}
+
+\parhs{Advantage of in-band metadata.}~Compared to other schemes that store the
+metadata separately~(e.g., shadow memory), \tool considers the high parallelism
+of the GPU. It leverages the GPU's \textit{memory access broadcast} mechanism,
+which groups the accesses to the same address into a single memory transaction.
+This significantly reduces the metadata retrieval overhead. \F~\ref{fig:metaadv}
+highlights this advantage. As shown in the figure, when $N$ threads access
+different parts of the same buffer~(e.g., parallel for-loop), \tool's in-band
+metadata scheme allows the GPU to broadcast its retrieval result to all
+threads, incurring only one additional memory transaction. By contrast, if the
+metadata is stored in shadow memory, each thread has to access the shadow
+memory individually with different offsets~(e.g., \texttt{addr>{}>3+off} as in
+ASAN), which cannot be broadcast due to the differences in the accessed
+addresses, leading to $N$ additional memory transactions. This is particularly
+important for GPU applications, which can easily execute thousands of threads
+in parallel. The extra memory transactions might overwhelm the memory bandwidth
+of the GPU, leading to significant performance degradation.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.7\linewidth]{figs/metaadv.pdf}
+	\caption{Comparison of metadata scheme.}
+	\label{fig:metaadv}
+\end{figure}
+
+
+\parh{Pointer arithmetic validation.}~Careful readers might notice that, if the
+pointer goes beyond the $2^n$ aligned bounds of a buffer, the retrieval process
+described earlier will fetch the wrong metadata, leading to incorrect results.
+This is due to a key assumption of \tool: the pointer arithmetic does not
+modify the metadata stored in the pointers. However, this assumption often does
+not hold in real-world applications. A considerable number of
+bugs~\cite{bug1,bug2,bug3,bug4} in frameworks like PyTorch~\cite{torch} and
+TensorFlow~\cite{tensorflow} originate from the miscalculation of
+pointers~(e.g., integer overflow) and can inadvertently corrupt the tagging
+bits, disabling the sanitizer.
+
+Previous solutions address this issue in different ways. Some, like LMI, modify
+the GPU's hardware to enforce pointer integrity, but this approach is not
+feasible on commodity GPUs. Others, such as cuCatch, offer incomplete
+protection by inserting padding between buffers. cuCatch's solution, however,
+is limited to off-by-one overflows and cannot handle more general pointer
+miscalculations.
+%
+To address this issue, \tool instead introduces an additional validation step for
+\textit{pointer arithmetics} to ensure that the embedded tagging information
+remains invariant. As depicted in \F~\ref{fig:arith_valid}, a pointer's
+``modifiable part'' is defined by its tag $n$, which governs a $2^{n+3}$
+address range~(e.g., \tool allocates at a minimum size of 16 bytes where
+$n=1$). Therefore, following any pointer arithmetic operation, the resulting
+pointer is expected to retain identical higher bits compared to the original
+pointer. To enforce this, \tool performs a bitwise \texttt{xor} between the original
+pointer and the resulting pointer. If the \texttt{xor} result is non-zero in
+the higher bits, \tool determines that the resulting pointer has exceeded its valid
+range, and invalidates it.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.55\linewidth]{figs/arith_valid.pdf}
+	\caption{Validation of pointer arithmetics.}
+	\label{fig:arith_valid}
+\end{figure}
+
+Note that we cannot directly terminate the program in such cases. This is
+because certain valid code constructs may produce invalid pointers without ever
+dereferencing them~(e.g., in the final iteration of an array loop). Therefore,
+instead of reporting an error immediately, \tool sets the highest bit of the
+resulting pointer to one. This delays the error until a dereference occurs,
+thus avoiding false positives.
+
+\parh{Summary.}~The detection process of spatial memory violations involves a
+two-step process. First, \tool checks whether the highest bit of the pointer is
+set. A set bit indicates that the pointer is invalid due to overflowed pointer
+arithmetics. If the pointer is valid, \tool then clears the lower bits of the
+pointer based on its $2^n$-aligned tag. This retrieves the in-band exact
+bounds, and \tool then checks whether the memory access is within these bounds.
+A memory access is only permitted to proceed if both of the checks pass.
+Otherwise, \tool raises an error and terminates the program.
+
+\subsection{Temporal Corruption Detection}
+\label{subsec:temporal_meta}
+This section details how \tool detects temporal corruption, such as
+use-after-free~(UAF) vulnerabilities. We first discuss how \tool invalidates a
+buffer's metadata upon its deallocation, and then introduce the countermeasures
+we employ to prevent metadata confusion due to memory reallocation.
+
+\parh{Metadata invalidation.}~Instead of deploying a new mechanism to detect
+temporal corruption, \tool invalidates a buffer's spatial metadata upon its
+deallocation to prevent temporal corruptions like UAF. As shown in
+\F~\ref{fig:meta_invalid}, \tool achieves this by setting the in-band exact
+bounds of a freed buffer to zero. Consequently, any subsequent memory access to
+the deallocated buffer will be captured by \tool since its valid size is now
+zero.
+%
+Note that \tool implements invalidation differently for global and local
+buffers. For global buffers allocated with \texttt{cudaMalloc} and freed by
+\texttt{cudaFree}, \tool instruments the \texttt{cudaFree} function to clear
+the in-band metadata. It also checks the metadata before deallocation to
+prevent double-free errors. Local buffers, however, have \textit{no} explicit
+deallocation sites. Instead, \tool invalidates them upon function exits.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.5\linewidth]{figs/meta_invalid.pdf}
+	\caption{Metadata invalidation.}
+	\label{fig:meta_invalid}
+\end{figure}
+
+While the invalidation mechanism described above prevents most temporal
+corruption, it is vulnerable to metadata confusion. For example,
+\F~\ref{fig:meta_reuse} illustrates how a local buffer's metadata can be
+confused with subsequent local variable. As the figure shows, a pointer,
+\texttt{ptr}, initially points to a valid buffer. Upon function exit, \tool
+clears \texttt{ptr}'s metadata to zero, which should prevent its subsequent
+use. However, because stack memory is constantly reused, \texttt{ptr}'s
+metadata can be overwritten by the local variable \texttt{var} of another
+function. This causes \tool to use incorrect metadata to validate \texttt{ptr},
+leading to incorrect results. A similar issue occurs with global buffers due to
+VA reuse, where data can be misidentified as metadata. To address this issue,
+we design \textit{stack epoch tracking} for local memory and \textit{VA
+randomization} for global memory.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.6\linewidth]{figs/meta_reuse.pdf}
+	\caption{Metadata confusion.}
+	\label{fig:meta_reuse}
+\end{figure}
+
+\parh{Stack epoch tracking.}~To prevent metadata confusion for local buffers,
+\tool embeds a \textit{stack epoch} into each pointer using the technique
+described in \S~\ref{subsec:tag}. Each epoch consists of two parts: stack
+depth~(5-bit) and generation~(5-bit). The stack depth represents the stack
+depth of the current thread, while the generation represents the number of
+function calls at current stack depth. We additionally allocate a global buffer
+to keep track of the current epoch of each thread. \tool permits a local
+pointer to be dereferenced if \ding{192}: its stack depth is less than or equal
+to the current thread's stack depth~(i.e., the pointer is from an ``older''
+stack frame), and \ding{193} its generation equals that of its stack
+depth~(i.e., this ``older'' stack frame is still alive, not replaced by a ``new
+generation'')
+
+\F~\ref{fig:stack_epoch} demonstrates how \tool uses stack epoch to validate
+local pointers upon dereference. In the code snippet of
+\F~\ref{fig:stack_epoch}, a \tool-instrumented function begins by obtaining and
+updating the depth \texttt{\_d} and the generation \texttt{\_g} of the current
+thread~(line 2) and assigning these values~(\texttt{f\_d} and \texttt{f\_g}) to
+each local buffer~(line 4). Line 5 shows that \texttt{func} erroneously holds a
+dangling pointer, \texttt{ptr}, returned by the function \texttt{local}.
+However, before \texttt{ptr} is dereferenced, \tool finds that \texttt{ptr}'s
+stack depth \texttt{ptr\_d} is greater than the current functions's stack depth
+\texttt{f\_d}~(line 6-7). This indicates that \texttt{ptr} has outlived its
+allocation function, \texttt{local}. \tool then raises an error and prevents
+the dereference.
+
+Though the stack depth and generation values wrap around after reaching 32,
+this is considered an acceptable limitation. For stack depth, our experiments
+show that, even for a basic CUDA function, the maximum stack depth it can reach
+is 17, which is far less than 32. As for generation, it indeed introduces false
+negatives under a highly specific scenario: an obsolete pointer is dereferenced
+after \textit{exactly} 32 function calls at the same stack depth. This scenario
+is considered rare and is highly unlikely to occur in practical applications.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.85\linewidth]{figs/stack_epoch.pdf}
+	\caption{Stack epoch tracking.}
+	\label{fig:stack_epoch}
+\end{figure}
+
+\parhs{Stack epochs for parallel threads.}~Due to the parallel nature of GPU
+applications, we create global arrays to store stack epochs, with each thread
+assigned own unique element. Specifically, we create two global arrays~(i.e.,
+depth and generation) with sizes equal to the number of concurrent threads on
+the GPU, calculated as $\text{threads/SM} \times \text{\#SMs}$. For existing
+NVIDIA GPUs, the maximum value of $\text{threads/SM}$ is 2048, and the maximum
+number of SMs is 132~\cite{b200}. We therefore conservatively allocate
+$2048\times 256=524,288$ elements for each array, which is more than sufficient
+for existing GPUs. Each element in the depth array occupies one byte. For the
+generation array, each element is allocated 32 bytes, providing one byte for
+the generation counter corresponding to each of the 32 possible stack depth
+values (0-31). This results in a total memory overhead of approximately
+16.5\,MiB, which is negligible for modern GPUs.
+
+\parh{VA randomization.}~Similar to local memory, global memory also faces the
+problem of metadata confusion. This occurs when the VA of a freed buffer is
+reclaimed and allocated to a new buffer. Consequently, dereferencing a dangling
+pointer to the original freed buffer would inadvertently access the new
+buffer's data, leading to a false negative. To prevent this, \tool deploys a
+robust VA randomization mechanism.
+
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.55\linewidth]{figs/rand_va.pdf}
+	\caption{VA randomization.}
+	\label{fig:rand_va}
+\end{figure}
+
+As shown in \F~\ref{fig:rand_va}, a simplified review of the global pointers
+from \S~\ref{subsec:spatial_meta}, \tool randomizes bits [40:$A$] of global
+pointers to prevent a VA from being reused. Bit $A$ is calculated based on the
+alignment of the allocated buffer. For example, if the buffer size is 16\,B,
+its lower 4 bits are fixed to zero. Therefore, $A$ is equal to four, and \tool can
+randomize the bits [40:4] of the VA to mitigate metadata confusion.
+%
+This mechanism creates an expansive random space~(i.e., $2^{41-A}$),
+rendering the probability of a VA collision negligible. For example, even in an
+extreme setting where $A=33$~(i.e., each allocation is 8\,GiB), there are still
+$2^8=256$ possible VAs. A GPU with 80 GiB memory~(e.g., H100) can only make ten
+such allocations before running out of memory. For more common allocation sizes
+in practice, such as 1\,MiB~(i.e., $A=20$), the size of random space is
+enormous, $2^{21}$. We can therefore safely assume that the VA of a freed
+buffer will not be reused in the same execution.
+
+In contrast, cuCatch~\cite{tarek2023cucatch}, generate a fixed random space
+with size $2^8=256$ VAs, irrespective of the allocation size. This makes it
+considerably more vulnerable to metadata confusion than \tool because GPU
+applications might concurrently hold over 256 live objects~\cite{tarek2023cucatch}.
+%
+Furthermore, \tool's current design is constrained by the available bits in the
+VA; only bits [46:0] are available for \tool's control, as bits [63:47] are
+fixed to zero by NVIDIA. If this restriction were lifted, \tool could
+significantly extend the random space by randomizing more bits in the VA.
+
+\parh{Summary.}~The detection of temporal violations is integrated into the
+general process for detecting spatial memory violations. Specifically, \tool
+invalidates a freed memory buffer by clearing its in-band exact bounds to zero.
+As a result, any subsequent access to the freed buffer will be detected by
+\tool. To prevent metadata confusion caused by memory reallocation, \tool additionally
+checks the stack epoch of local pointers and randomizes VA bits of global
+pointers.
+
+\subsection{Optimization}
+\label{subsec:opt}
+In this section, we discuss how \tool reduces redundant checks to improve its
+performance. \F~\ref{fig:three_opt} illustrates the three types of optimizations that
+\tool adopts to reduce these redundant checks.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=.7\linewidth]{figs/three_opt.pdf}
+	\caption{Optimizations adopted by \tool.}
+	\label{fig:three_opt}
+\end{figure}
+
+
+
+\parh{Recurring checks.}~As shown in \F~\ref{fig:three_opt}(a), a common
+optimizable code pattern involves the same pointer being dereferenced multiple
+times. In such cases, a naive instrumentation would insert the same checks
+repeatedly, causing unnecessary overhead. Our optimization
+iterates over all checks with the same address and retains only the dominating
+ones. The execution of a dominating check C\textsubscript{dom} implies
+the execution of its subordinate check C\textsubscript{sub}, allowing the
+subordinate checks to be safely optimized.
+
+\parh{Neighboring checks.}~\F~\ref{fig:three_opt}(b) shows a case where
+multiple checks are performed on the same base address within the same basic
+block. In this scenario, \tool identifies these checks and retains only those
+corresponding to the maximum offset C\textsubscript{max} and the minimum
+offset C\textsubscript{min}. Since these checks share the same base address,
+the successful validation of both C\textsubscript{max} and C\textsubscript{min}
+logically guarantees the validity of all intermediate checks. Therefore, \tool
+can safely eliminate these intermediate checks to reduce the overhead.
+
+\parh{Loop-inductive checks.}~The final optimization \tool employs is the
+hoisting of loop-inductive checks. As shown in \F~\ref{fig:three_opt}(c), a
+check inside a loop would normally be executed on every iteration with a
+varying offset. However, in many common cases~(e.g., array iteration), the
+offset used in these checks is a \textit{loop-inductive variable}. This type of
+variable changes a fixed value on each iteration, allowing its value to be
+pre-determined if the number of iterations is known. For example, the index
+\texttt{i} in \F~\ref{fig:three_opt}(c) is a loop-inductive variable. It
+initializes to zero and increments by a constant value \texttt{s} on each
+iteration. Therefore, \tool can hoist the check to the loop's prologue by only
+checking its initial value and maximum value. Note that a
+\textit{loop-invariant} check, where the offset remains constant throughout the
+loop, is a special case of a loop-inductive check. Therefore, loop-invariant
+checks are optimized in the same manner described above.

@@ -1,0 +1,59 @@
+\documentclass[letterpaper,twocolumn,10pt,review,anonymous]{article}
+
+\usepackage{usenix}
+%%
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    Bib\TeX}}}
+
+\input{./files/util.tex}
+\usepackage{subcaption}
+\begin{document}
+
+\title{\tool: Capturing Memory Corruption on NVIDIA GPUs}
+
+\author{Anonymous Authors}
+
+
+\maketitle
+\begin{abstract}
+  Modern GPU applications, particularly in machine learning and scientific
+  computing, are increasingly affected by memory corruption bugs due to their
+  reliance on memory-unsafe languages like C/C++. However, existing solutions
+  either depend on hardware/software that is not available on commodity GPUs,
+  or incur prohibitive performance overheads, rendering them impractical for
+  real-world deployment.
+
+  We present \tool, a novel GPU sanitizer that is readily deployable on
+  commodity NVIDIA GPUs. \tool employs a hybrid metadata scheme combining
+  pointer tagging with in-band buffer bounds to enable accurate and efficient
+  memory safety validation. \tool also introduces mechanisms such as stack epoch
+  tracking and virtual address randomization to mitigate metadata confusion
+  caused by temporal corruption.
+
+  Our security evaluation on 33 programs demonstrates that \tool uniquely
+  achieves comprehensive coverages of both spatial and temporal bugs among
+  existing GPU sanitizers. Moreover, our performance benchmarks on 44 programs,
+  including large-language models like LLaMA2-7B and LLaMA3-8B, show
+  that \tool incurs an average slowdown of 13\% and a negligible
+  memory overhead of 0.3\%. 
+
+\end{abstract}
+
+\input{./files/intro.tex}
+\input{./files/bg.tex}
+\input{./files/tm.tex}
+\input{./files/design.tex}
+\input{./files/impl.tex}
+\input{./files/eval.tex}
+\input{./files/discussion.tex}
+
+
+\bibliographystyle{plainnat}
+\bibliography{ref}
+
+\appendix
+
+\end{document}
+\endinput

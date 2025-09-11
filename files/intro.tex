@@ -1,0 +1,92 @@
+\section{Introduction}
+\label{sec:intro}
+
+Graphics Processing Units~(GPUs) were originally designed for graphics
+rendering, but the adoption of GPUs in general-purpose computing has
+transformed them into indispensable accelerators in various domains, such as
+scientific computing, machine learning, and computer
+vision~\cite{torch,tensorflow,paddle,opencv}. Furthermore, the fast-evolving
+ecosystem around CUDA and OpenACC~\cite{openacc} has made it easier than ever
+for developers to leverage the power of GPUs. However, modern GPU programming
+languages like CUDA are built upon \textit{memory-unsafe} languages such as
+C/C++, which are notorious for causing memory corruption bugs. Therefore, the
+GPU ecosystem is now confronting the same pervasive challenges that have
+affected CPU applications. For example, a series of memory corruption
+bugs~\cite{bug1,bug2,bug3,bug4} has been reported in the PyTorch
+framework~\cite{torch}. Similar cases have also been reported in other popular
+frameworks such as TensorFlow~\cite{tensorflow} and PaddlePaddle~\cite{paddle}.
+These bugs not only affect the robustness of GPU applications, but can also be
+exploited by attackers to compromise their security.
+
+Recent studies have revealed the potential damage from these memory
+bugs~\cite{zhenkai2024gpu1,park2021mind,miele2015buffer}. For example,
+\citet{zhenkai2024gpu1} have shown that these memory vulnerabilities can be
+exploited on GPUs, which may lead to attacks such as return-oriented
+programming~(ROP). Similarly, attacks that leverage memory corruption can
+undermine the accuracy of deep learning models~\cite{park2021mind}. Together,
+these studies indicate that the nascent GPU ecosystem faces the imminent threat
+of widespread memory corruption.
+
+To mitigate memory corruption issues on GPUs, researchers have proposed various
+memory safety
+solutions~\cite{tarek2023cucatch,lee2025lmi,lee2022shield,clarm,di2018gmod}.
+However, these solutions often fall short of comprehensive protection, with
+each approach facing unique drawbacks. For instance, LMI~\cite{lee2025lmi} and
+GPUShield~\cite{lee2022shield} rely on customized hardware modifications that
+are not available on commodity GPUs, making them infeasible for real-world
+deployment. cuCatch~\cite{tarek2023cucatch} faces the same problem since it
+needs to modify the NVIDIA's proprietary toolchains which are not available to
+the public. Beyond deployment hurdles, these approaches are also limited by
+their design choices. For instance, cuCatch cannot accurately detect local
+memory overflows as it lacks precise bounds information from the compiler's
+frontend. GMOD~\cite{di2018gmod} and clArmor~\cite{clarm} take a canary-based
+approach that can only detect adjacent memory overflows.
+
+In this paper, we introduce \tool, the first GPU sanitizer that is deployable
+on commodity NVIDIA GPUs, providing comprehensive and efficient detection of
+memory corruption. Unlike previous solutions that are based on customized
+hardware or proprietary toolchains, \tool is designed to work with
+off-the-shelf NVIDIA GPUs and the open-source LLVM toolchain. Moreover, \tool
+employs a hybrid metadata scheme that combines pointer tagging and in-band
+buffer bounds. This scheme enables fast metadata retrieval using the memory
+broadcast mechanism on GPUs, achieving efficient and accurate detection of
+memory corruption. To mitigate issues like metadata confusion caused by
+temporal corruption~(i.e., misidentifying normal data as metadata due to memory
+reallocation), \tool incorporates mechanisms like stack epoch tracking and
+virtual address randomization to uniquely identify metadata for local and
+global memory, respectively. Lastly, \tool employs several optimizations like
+loop hoisting to remove redundant checks, further improving its performance.
+
+To systematically examine \tool's performance overhead, we evaluated \tool with
+a benchmark suite of 44 GPU programs. The evaluated benchmark set includes
+well-known GPU benchmarks such as Rodinia~\cite{rodinia},
+PolyBench~\cite{polybenchgpu}, Tango~\cite{tango}, and large language models~(LLMs),
+including LLaMA2-7B~\cite{llama2} and LLaMA3-8B~\cite{llama3}. The evaluation
+results show that \tool incurs an average performance overhead of only 13\% and
+a negligible memory overhead of 0.3\%. For LLMs, \tool only reduces throughput
+by 11\% on average.
+%
+Beyond performance, we conducted a thorough security evaluation of \tool.
+Specifically, we developed a set of 33 GPU programs containing various spatial
+and temporal memory bugs. Among the evaluated memory safety solutions, \tool is
+the only system that achieves full coverage for both spatial and temporal
+memory bugs on the evaluation suite. Thus, we conclude that \tool is the first
+practical GPU sanitizer that can be readily deployed on commodity GPUs,
+offering comprehensive and efficient detection of memory corruption.
+
+In summary, our contributions are as follows:
+\begin{itemize}[leftmargin=*] 
+  \item Unlike solutions based on customized
+  hardware components or proprietary toolchains, this paper proposes, for the
+  first time, a practical sanitizer readily available on commodity GPUs, that provides comprehensive detection capability.
+  \item Technically, \tool incorporates various mechanisms to achieve
+    comprehensive detection of memory corruption on GPU, such as pointer
+    tagging and in-band buffer bounds. Furthermore, \tool includes several
+    optimizations such as check hoisting to achieve efficient violation
+    detection.
+  \item We implemented a prototype of \tool using LLVM 21
+    toolchains~\cite{llvm} and evaluated its detection capability
+    and performance overhead across various benchmarks. The evaluation
+    shows \tool delivers accurate detection with an average performance penalty
+    of 13\%. Moreover, we release the source of \tool at \cite{cusan} to promote future research.
+\end{itemize}

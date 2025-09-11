@@ -1,0 +1,38 @@
+\section{Motivation}
+\label{sec:tm}
+
+\parh{Characteristics of GPU workloads.}~Since GPUs are designed for
+  highly parallel workloads, it is common for GPU applications to execute
+  thousands of threads concurrently. This high degree of parallelism directly
+  leads to a need for high-throughput memory access. However, current GPU
+sanitizers, such as cuCatch, leverage shadow memory to store metadata, which
+generates a considerable memory footprint and puts significant pressure on the
+memory systems.
+
+\parh{Deployment hurdles of prior work.}~A major problem for prior GPU
+sanitizers is the difficulty of deployment. Currently, the only sanitizer
+supported on commodity NVIDIA GPUs is the compute-sanitizer~\cite{compsan},
+which, as shown in \T~\ref{tbl:sum}, has limited detection capability and
+substantial performance overhead~(15$\times$ on average). Recent
+studies such as cuCatch and LMI~\cite{tarek2023cucatch,lee2025lmi} either
+depend on the proprietary NVIDIA toolchains or customized hardware, making them
+inaccessible to academic researchers and community developers.
+
+\parh{Insufficient detection capability.}~Existing work such as cuCatch often
+achieves only partial detection of memory corruption. As shown in
+\T~\ref{tbl:sum}, cuCatch is implemented at the compiler backend and cannot
+obtain accurate information about allocation sizes from the frontend, leading to
+incomplete detection. Moreover, cuCatch uses a heuristic scheme with limited
+entropy~($2^{8}=256$) to detect temporal corruption, which misses corruption
+when the number of allocated objects exceeds 256. Similar issues also exist with
+LMI, which cannot handle temporal corruption with copied pointers.
+
+\parh{\tool.}~These observations motivate us to design a new GPU
+sanitizer -- \tool. We implement \tool using off-the-shelf features~(i.e., MMU)
+of NVIDIA GPUs so that \tool can be directly deployed on commodity GPUs. We
+also design a new hybrid metadata scheme that combines pointer-tagging and
+in-band metadata to accurately detect both spatial and temporal 
+corruption. Moreover, \tool takes the characteristics of GPU workloads into
+account; its scheme leverages in-band metadata to minimize the pressure on the
+cache and memory system, achieving minimum performance overhead.
+

@@ -1,0 +1,138 @@
+\newcommand{\tool}{\mbox{\textsc{CuSafe}}\xspace}
+
+\newcommand{\outline}[1]{\mytodocyan{[outline: #1]}}
+\newcommand{\mytodocyan}[1]{\textcolor{cyan}{\ding{46}~{\sf}~#1}}
+
+\newcommand{\hy}[1]{\mytodopink{[hy: #1]}}
+\newcommand{\mytodopink}[1]{\textcolor{violet}{\ding{46}~{\sf}~#1}}
+
+\newcommand{\fw}[1]{\mytodored{[fw: #1]}}
+\newcommand{\mytodored}[1]{\textcolor{red}{\ding{46}~{\sf}~#1}}
+
+\newcommand{\yj}[1]{\mytodopink{[yj: #1]}}
+
+\definecolor{wsorange}{RGB}{245,166,115}
+\newcommand{\mytodoblue}[1]{\textcolor{blue}{\ding{46}~{\sf}~#1}}
+\newcommand{\mytodoorange}[1]{\textcolor{wsorange}{\ding{46}~{\sf}~#1}}
+\newcommand{\ws}[1]{\mytodoorange{[ws: #1]}}
+\newcommand{\zl}[1]{\textcolor{SeaGreen}{\ding{46}~[zl: #1]}}
+\newcommand{\fixme}[1]{{\color{blue}{#1}}} 
+\newcommand{\sw}[1]{{\color{blue}{\small SW: #1}}} 
+
+\newcommand{\bug}[1]{\noindent\textit{#1}}
+
+\newcommand{\parh}[1]{\noindent\textbf{#1}}
+\newcommand{\parhs}[1]{\noindent\underline{\textit{#1}}}
+%\newcommand{\parh}[1]{\smallskip\noindent\textbf{#1}}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{threeparttable}
+\usepackage{xspace}
+\usepackage{amsmath,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{threeparttable}
+\usepackage{colortbl}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+%\usepackage[dvipsnames]{xcolor}
+\usepackage{array}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{colortbl}
+\usepackage[ruled,linesnumbered,boxed]{algorithm2e}
+\usepackage{algpseudocode}
+\usepackage{pifont}
+\usepackage{enumitem}
+\usepackage{balance}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{diagbox}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{makecell}
+\usepackage{verbatim}
+\usepackage{acronym}
+\usepackage[super]{nth}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usepackage{filecontents}
+\usepackage[misc]{ifsym}
+\usepackage{grffile}
+\usepackage{tikz,pgf}
+\usepackage{amsthm}
+\usepackage[most]{tcolorbox}
+\usepackage{enumitem}
+\usepackage{trimclip}
+
+\newtheorem*{mydef}{Definition}
+\newtheorem*{mycol}{Corollary}
+
+\usetikzlibrary{calc}
+\makeatletter
+\def\mfontsize{\f@size}
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+		\node[shape=circle,draw,inner sep=0pt] (char) {#1};}}
+
+
+\newcommand{\F}{Fig.}
+\newcommand{\E}{Eq.}
+%\renewcommand{\F}{Figure}
+\newcommand{\T}{Table}
+%\renewcommand{\S}{Section}
+\renewcommand{\S}{Sec.}
+\newcommand{\A}{Alg.}
+\newcommand{\highlight}[1]{{\color{red}\textbf{#1}}}
+
+
+
+\usepackage{xcolor}
+
+\usepackage{minted}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{cadmiumgreen}{rgb}{0.0, 0.42, 0.24}
+\lstdefinestyle{mystyle}{
+	%keywordstyle=\color{cadmiumgreen},
+	escapeinside={(*@}{@*)},
+	backgroundcolor=\color{backcolour},   
+	commentstyle=\color{codegreen},
+	keywordstyle=\color{magenta},
+	numberstyle=\tiny\color{codegray},
+	stringstyle=\color{codepurple},
+	frame=shadowbox,
+	basicstyle=\ttfamily\footnotesize,
+	breakatwhitespace=false,         
+	breaklines=true,                 
+	captionpos=b,                    
+	keepspaces=true,                 
+	numbers=left,                    
+	numbersep=5pt,                  
+	showspaces=false,                
+	showstringspaces=false,
+	showtabs=false,                  
+	tabsize=2,
+}
+
+\lstdefinestyle{gdb}
+{
+	backgroundcolor=\color{backcolour},
+	%backgroundcolor=\color{black},
+	%keywordstyle=\color{cadmiumgreen},
+	keywordstyle=\color{magenta},
+	escapeinside={(*@}{@*)},
+	basicstyle=\scriptsize\color{black}\ttfamily,
+	frame=shadowbox
+}
+
+%\renewcommand{\baselinestretch}{0.986}

@@ -1,0 +1,25 @@
+\section{Implementation}
+\label{sec:impl}
+
+
+\tool is implemented as a transform pass of LLVM 21 and a dynamic library to
+hook CUDA APIs (e.g., \texttt{cudaMalloc}). \tool consists of 2,964 lines of
+C/C++ code. This section details our modifications to the compilation/execution
+pipeline of CUDA programs.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.9\linewidth]{figs/workflow.pdf}
+  \caption{\tool-enhanced CUDA pipeline.}
+  \label{fig:workflow}
+\end{figure}
+
+
+\F~\ref{fig:workflow} shows \tool's integration into the standard CUDA program
+compilation and execution pipeline. First, \tool introduces a new pass within
+the LLVM compilation pipeline, which processes the Intermediate
+Representation~(IR) to insert necessary checks. Next, NVIDIA's proprietary
+\texttt{nvcc} compiles this instrumented IR into executables. At last, \tool
+replaces memory management APIs~(e.g., \texttt{cudaMalloc}) through dynamic
+library preloading~(i.e., utilizing \texttt{LD\_PRELOAD}), thereby ensuring
+that allocated memory is embedded with the needed metadata.
