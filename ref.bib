@@ -222,6 +222,8 @@
   organization = {IEEE},
 }
 
+@string{cgo = "CGO"}
+
 @inproceedings{di2018gmod,
   title = {GMOD: A dynamic GPU memory overflow detector},
   author = {Di, Bang and Sun, Jianhua and Li, Dong and Chen, Hao and Quan, Zhe},
@@ -919,10 +921,10 @@
 
 @inproceedings{paddle,
   author = {Bi, Ran and Xu, Tongtong and Xu, Mingxue and Chen, Enhong},
-  booktitle = {2022 IEEE 24th Int Conf on High Performance Computing &
-               Communications; 8th Int Conf on Data Science & Systems; 20th Int
+  booktitle = {2022 IEEE 24th Int Conf on High Performance Computing \&
+               Communications; 8th Int Conf on Data Science \& Systems; 20th Int
                Conf on Smart City; 8th Int Conf on Dependability in Sensor, Cloud
-               & Big Data Systems & Application (HPCC/DSS/SmartCity/DependSys)},
+               \& Big Data Systems \& Application (HPCC/DSS/SmartCity/DependSys)},
   title = {PaddlePaddle: A Production-Oriented Deep Learning Platform
            Facilitating the Competency of Enterprises},
   year = {2022},
@@ -948,21 +950,21 @@
   Author = {Chris Lattner and Vikram Adve},
   Title = {{LLVM}: A Compilation Framework for Lifelong Program Analysis and
            Transformation},
-  Booktitle = CGO,
+  Booktitle = {International Symposium on Code Generation and Optimization (CGO)},
   Address = {San Jose, CA, USA},
   Month = {Mar},
   Year = {2004},
   pages = {75–88},
 }
 
-@article{sharedmem,
+@misc{sharedmem,
   author = {Mark Harris},
   title = {Using Shared Memory in CUDA C/C++ | NVIDIA Technical Blog},
   year = {2025},
   url = {https://developer.nvidia.com/blog/using-shared-memory-cuda-cc/},
 }
 
-@article{opennv,
+@misc{opennv,
   author = {NVIDIA},
   title = {NVIDIA/open-gpu-kernel-modules: NVIDIA Linux open GPU kernel module
            source},
@@ -999,7 +1001,7 @@
   series = {USENIX ATC'12},
 }
 
-@article{lam,
+@misc{lam,
   author = {Intel},
   title = {Enable Intel LAM in Linux},
   year = {2025},
@@ -1053,7 +1055,7 @@
   series = {CCS '13},
 }
 
-@article{blackwell,
+@misc{blackwell,
   author = {NVIDIA},
   title = {The Engine Behind AI Factories | NVIDIA Blackwell Architecture},
   year = {2025},
@@ -1101,33 +1103,33 @@
   series = {ISCA '23},
 }
 
-@article{bug1,
+@misc{bug1,
   author = {jwnhy},
-  title = {[CUDA] Illegal Memory Access with `ConvTranspose2d` · Issue #144611 ·
+  title = {[CUDA] Illegal Memory Access with `ConvTranspose2d` · Issue \#144611 ·
            pytorch/pytorch},
   year = {2025},
   url = {https://github.com/pytorch/pytorch/issues/144611},
 }
 
-@article{bug2,
+@misc{bug2,
   author = {jwnhy},
-  title = {[CUDA] Illegal Memory Access with `AdaptiveAvgPool2d` · Issue #145349
+  title = {[CUDA] Illegal Memory Access with `AdaptiveAvgPool2d` · Issue \#145349
            · pytorch/pytorch},
   year = {2025},
   url = {https://github.com/pytorch/pytorch/issues/145349},
 }
 
-@article{bug3,
+@misc{bug3,
   author = {ChaitanyaRS06},
   title = {Tensor.long() produces inconsistent results for torch.inf between CPU
-           and GPU · Issue #154724 · pytorch/pytorch},
+           and GPU · Issue \#154724 · pytorch/pytorch},
   year = {2025},
   url = {https://github.com/pytorch/pytorch/issues/154724},
 }
 
-@article{bug4,
+@misc{bug4,
   author = {SilentTester73},
-  title = {Crash in `SparseBincount` due to overflow · Issue #94118 ·
+  title = {Crash in `SparseBincount` due to overflow · Issue \#94118 ·
            tensorflow/tensorflow},
   year = {2025},
   url = {https://github.com/tensorflow/tensorflow/issues/94118},
@@ -1149,7 +1151,7 @@
   month = aug,
 }
 
-@article{rsan,
+@misc{rsan,
   author = {Floris Gorter and Cristiano Giuffrida},
   title = {RangeSanitizer: Detecting Memory Errors with Efficient Range Checks},
   year = {2025},
@@ -1540,7 +1542,7 @@
   url = {https://arxiv.org/abs/1410.0759},
 }
 
-@article{kernelmalloc,
+@misc{kernelmalloc,
   author = {NVIDIA},
   title = {kernel malloc() efficiency really bad - CUDA / CUDA Programming and
            Performance - NVIDIA Developer Forums},
@@ -1550,7 +1552,7 @@
          },
 }
 
-@article{magma,
+@misc{magma,
   author = {Andrzej Chrzeszczyk and Jacob Anders},
   title = {Matrix computations on the GPU CUBLAS, CUSOLVER and MAGMA by example},
   year = {2025},
@@ -1567,14 +1569,14 @@ url = {https://github.com/arrayfire/arrayfire},
 year = {2015}
 }
 
-@article{hip,
+@misc{hip,
 	author	={AMD},
 	title	={HIP documentation — HIP 6.4.43484 Documentation},
 	year	={2025},
 	url	={https://rocm.docs.amd.com/projects/HIP/en/latest/}
 	}
 
-@article{nsight,
+@misc{nsight,
 	author	={NVIDIA},
 	title	={NVIDIA Nsight Systems | NVIDIA},
 	year	={2025},
@@ -1611,14 +1613,14 @@ year = {2015}
       url={https://arxiv.org/abs/2407.21783}, 
 }
 
-@article{b200,
+@misc{b200,
 	author	={NVIDIA},
 	title	={DGX B200: The Foundation for Your AI Factory | NVIDIA},
 	year	={2025},
 	url	={https://www.nvidia.com/en-us/data-center/dgx-b200/}
 	}
 
-@article{cudaguide,
+@misc{cudaguide,
 	author	={NVIDIA},
 	title	={CUDA C++ Programming Guide — CUDA C++ Programming Guide},
 	year	={2025},
@@ -1637,16 +1639,6 @@ year = {2015}
   doi={10.1109/ISPASS.2019.00021}}
 
 
-@INPROCEEDINGS{rodinia,
-  author={Che, Shuai and Boyer, Michael and Meng, Jiayuan and Tarjan, David and Sheaffer, Jeremy W. and Lee, Sang-Ha and Skadron, Kevin},
-  booktitle={2009 IEEE International Symposium on Workload Characterization (IISWC)}, 
-  title={Rodinia: A benchmark suite for heterogeneous computing}, 
-  year={2009},
-  volume={},
-  number={},
-  pages={44-54},
-  keywords={Kernel;Multicore processing;Parallel processing;Application software;Yarn;Benchmark testing;Central Processing Unit;Energy consumption;Microprocessors;Computer architecture},
-  doi={10.1109/IISWC.2009.5306797}}
 
 
 @inproceedings{bitflip1,
@@ -1717,7 +1709,7 @@ location = {Seattle, WA, USA}
    month=jul, pages={102549} }
 
 
-@article{cusan,
+@misc{cusan,
 	author	={Anonymous},
 	title	={CuSan Website},
 	year	={2025},
