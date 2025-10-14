@@ -1,7 +1,0 @@
-\section{Conclusion}
-\label{sec:conclusion}
-In this paper, we presented GPU-Fuzz, a novel fuzzing framework that leverages the Z3 SMT solver to discover bugs in deep learning GPU kernels. Our work tackles the critical challenge of the "semantic gap" by generating constraint-satisfying, valid inputs that can effectively exercise the deep backend logic of DL frameworks.
-
-Our extensive evaluation demonstrates that this constraint-based approach is both effective and efficient. GPU-Fuzz successfully discovered 14 unique, previously unknown bugs in major frameworks like PyTorch, TensorFlow, and PaddlePaddle. Furthermore, we showed that our log-based reproduction methodology drastically reduces the time required for bug analysis and debugging.
-
-The bugs found by GPU-Fuzz underscore the continued need for specialized, constraint-aware fuzzing tools in the domain of deep learning. By making our tool and the discovered bugs publicly available, we hope to provide a valuable resource for developers and researchers working to improve the reliability and security of modern AI systems.

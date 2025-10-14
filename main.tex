@@ -11,25 +11,25 @@
 \usepackage{subcaption}
 \begin{document}
 
-\title{GPU-Fuzz: An Automated System for Fuzzing Deep Learning Frameworks on GPUs}
+\title{GPU-Fuzz: A Constraint-Guided Fuzzer for Finding Memory Errors in GPU-Accelerated Deep Learning Frameworks}
 
 \author{NAME}
 
 
 \maketitle
 \begin{abstract}
-The extensive adoption of GPUs in deep learning (DL) frameworks has made their security and reliability paramount. However, existing fuzzing techniques often fail to penetrate deep into GPU compute kernels because they cannot efficiently generate the semantically valid, complex inputs that DL operators require. This paper introduces GPU-Fuzz, a fuzzing system that overcomes this challenge by leveraging the Z3 SMT solver. GPU-Fuzz automatically generates valid test cases by modeling the intricate parameter and shape relationships of DL operators as formal constraints. Applying this approach to major frameworks like PyTorch, TensorFlow, and PaddlePaddle, we discovered 14 unique, previously unknown bugs. Our system facilitates easy bug reproduction through a comprehensive logging mechanism that captures all necessary parameters and inputs. This work demonstrates that constraint-based fuzzing is a highly effective and practical approach for securing the core components of modern DL systems.
+GPU memory errors represent an imminent and important threat to the reliability of deep learning (DL) frameworks, leading to system crashes and silent data corruption. However, discovering these bugs is challenging because existing fuzzers for DL systems focus on the neural network structure to find compiler logic errors. While effective for their purpose, they do not systematically explore the intricate operator parameter space where conditions that trigger low-level GPU memory errors lie. This paper introduces \textsc{Gpu-Fuzz}, a fuzzer specifically engineered to address this gap. Unlike structure-oriented fuzzers, \textsc{Gpu-Fuzz} models the complex relationships between operator parameters as formal constraints. It then uses a constraint solver to generate test cases that probe boundary conditions prone to memory errors in GPU kernels. By applying \textsc{Gpu-Fuzz} to major frameworks like PyTorch and TensorFlow, we discovered 14 previously unknown bugs, the majority of which are critical memory-related errors. Our work demonstrates that focusing on the operator parameter space is a highly effective and complementary approach for securing the foundational layers of modern DL systems.
 \end{abstract}
 
-\input{./files/intro.tex}
-\input{./files/bg.tex}
-\input{./files/design.tex}
-\input{./files/impl.tex}
-\input{./files/eval.tex}
-\input{./files/discussion.tex}
-\input{./files/related_work.tex}
-\input{./files/disclosure.tex}
-\input{./files/conclusion.tex}
+\input{./files/1_intro.tex}
+\input{./files/2_prel.tex}
+\input{./files/3_design.tex}
+\input{./files/4_impl.tex}
+\input{./files/5_eval.tex}
+\input{./files/6_discussion.tex}
+\input{./files/7_related_work.tex}
+\input{./files/8_disclosure.tex}
+\input{./files/9_conclusion.tex}
 
 
 \bibliographystyle{plainnat}

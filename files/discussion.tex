@@ -1,9 +1,0 @@
-\section{Discussion and Limitations}
-\label{sec:discussion}
-While our results demonstrate the effectiveness of GPU-Fuzz, we acknowledge several limitations and areas for future work.
-
-\parh{Manual Modeling Effort.} The effectiveness of GPU-Fuzz is contingent on the quality and coverage of its constraint library. As detailed in Section~\ref{sec:impl}, modeling a new operator family requires manual effort to encode its constraints in Z3. While this one-time cost is amortized over long fuzzing campaigns, it presents a scalability challenge for covering the hundreds of operators available in modern deep learning frameworks. Future work could explore techniques to semi-automate the extraction of constraints from framework documentation or operator implementations.
-
-\parh{Lack of Quantitative Efficiency Comparison.} In our evaluation of RQ2, we argued for the efficiency of our approach from a design standpoint but did not provide a quantitative comparison against a baseline random fuzzer. Such an experiment, measuring metrics like valid test cases per hour or time-to-first-bug, would provide a more rigorous validation of the performance benefits of constraint-based fuzzing. We consider this a key priority for future work.
-
-\parh{Limited Oracle.} Our primary test oracle is \texttt{compute-sanitizer}, which is excellent for finding memory corruption bugs. However, it cannot detect other classes of bugs, such as silent numerical correctness issues (where the kernel produces the wrong result without crashing) or performance regressions. A more comprehensive approach would involve differential fuzzing against a CPU implementation, which is a promising direction for future work.

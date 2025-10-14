@@ -1,0 +1,16 @@
+\section{Related Work}
+\label{sec:related_work}
+
+Our work is positioned at the intersection of deep learning (DL) systems security and software testing, with a specific focus on uncovering memory-related bugs in GPU kernels.
+
+\subsection{Fuzzing for Deep Learning Systems}
+Fuzzing for DL systems primarily involves two approaches: structure-level and API-level testing.
+
+\textbf{Structure-level fuzzers}, including NNSmith~\cite{nnsmith}, TVMFuzz~\cite{tvmfuzz}, and Lemon~\cite{lemon}, focus on generating valid neural network models to test the compiler stack. Their strength lies in identifying graph-level optimization bugs. However, their network-centric view is ill-suited for exploring the operator parameter boundaries required to trigger memory access violations in GPU kernels.
+
+\textbf{API-level fuzzers}, such as FreeFuzz~\cite{freefuzz}, DeepREL~\cite{deeprel}, and TitanFuzz~\cite{titanfuzz}, test the API layer by generating valid sequences of function calls. While effective for detecting API-level crashes, they cannot uncover silent memory errors that occur at a lower level and are only visible via specialized tools like \texttt{compute-sanitizer}.
+
+In contrast, \textsc{Gpu-Fuzz} is a \textbf{parameter-level fuzzer}. It complements existing work by focusing on individual operators and systematically exploring their parameter boundary conditions. This targeted approach is uniquely effective at discovering the memory safety vulnerabilities within GPU backends that other methods miss.
+
+\subsection{GPU Security}
+Other research targets the GPU software stack more directly. For example, compiler fuzzers like Cudasmith~\cite{cudasmith} generate random CUDA C programs from scratch to stress-test the CUDA compiler (\texttt{nvcc}) itself. In contrast, \textsc{Gpu-Fuzz} does not generate new CUDA code; instead, it tests the existing, domain-specific, and highly-optimized CUDA kernels that are handwritten by framework developers to implement core DL operators. Similarly, driver-level fuzzers such as GLeeFuzz~\cite{gleefuzz} and Moneta~\cite{moneta} test the GPU stack from a different angle. \textsc{Gpu-Fuzz} bridges the gap between high-level DL applications and low-level GPU execution by using the frameworks' own operators as the entry point to stress-test the underlying kernels for memory safety.

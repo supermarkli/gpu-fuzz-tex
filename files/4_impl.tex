@@ -1,0 +1,42 @@
+\section{Implementation}
+\label{sec:impl}
+Our implementation of GPU-Fuzz consists of approximately 2,000 lines of Python code. The system is orchestrated by a central controller that manages the fuzzing loop, which includes test case generation, execution, and logging.
+
+\parh{Constraint Library and Generation.}
+Our constraint library, implemented in \texttt{gen/ops.py}, currently provides models for 11 families of operators, including various types of convolutions, pooling, and element-wise arithmetic operations. We prioritized these operator families because they are not only fundamental to a wide range of deep learning models but also feature complex memory access patterns, making them a high-priority target for uncovering memory-related vulnerabilities. Table~\ref{tab:operator_families} lists the supported operator families. We use the Z3 theorem prover from Microsoft Research as our backend constraint solver. Building a model for a new operator family, such as \texttt{AbsConv}, typically requires 100-150 lines of code to define its parameters as symbolic variables and encode the mathematical relationships between them as formal constraints. The \texttt{materialize} method in each operator class then queries the Z3 solver in a loop. After finding a valid solution, it adds a new constraint to exclude the current solution, thereby compelling the solver to find a novel and distinct set of valid parameters in the subsequent iteration. This process is essential for exploring a diverse range of configurations.
+
+\begin{table*}[t]
+\centering
+\caption{Supported Operator Families and Specific Operators in GPU-Fuzz}
+\label{tab:operator_families}
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Category} & \textbf{Operator Family} & \textbf{Specific Operators} & \textbf{Notes / Examples} \\
+\midrule
+\multirow{2}{*}{Convolution} & \multirow{2}{*}{Convolution} & Conv (1d, 2d, 3d) & Covers 1D, 2D, and 3D standard convolutions. \\
+& & ConvTranspose (1d, 2d, 3d) & Covers 1D, 2D, and 3D transposed convolutions. \\
+\midrule
+\multirow{6}{*}{Pooling} & \multirow{6}{*}{Pooling} & MaxPool (1d, 2d, 3d) & \\
+& & AvgPool (1d, 2d, 3d) & \\
+& & FractionalMaxPool (2d, 3d) & \\
+& & LPPool & \\
+& & AdaptiveAvgPool (1d, 2d, 3d) & \\
+& & AdaptiveMaxPool (1d, 2d, 3d) & \\
+\midrule
+\multirow{5}{*}{Padding} & \multirow{5}{*}{Padding} & ConstantPad & \\
+& & ReflectionPad & \\
+& & ReplicationPad & \\
+& & ZeroPad & \\
+& & CircularPad & \\
+\midrule
+\multirow{2}{*}{Element-Wise} & Unary & (abs, sin, sqrt, ...) & Includes absolute value, sine, square root, etc. \\
+& Binary & (add, sub, mul, ...) & Includes element-wise addition, subtraction, multiplication, etc. \\
+\midrule
+Matrix Ops & MatMul & MatMul / BMM & Standard and batched matrix multiplication. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\parh{Framework Instantiation.} Following the generation of a parameter configuration by the constraint solver, the \texttt{model\_gen.py} script directly materializes it into code for a specific framework (PyTorch, TensorFlow, or PaddlePaddle). It uses the framework's native Python API (e.g., \texttt{torch.nn.Conv2d}) to construct the operator with the solved parameters, creates tensor objects with the specified shapes, populates them with random data, and executes the operation on the GPU.
+
+\parh{Automated Violation Detection.} A key technical challenge was reliably automating the detection of memory safety violations. Our main controller script, \texttt{controller.py}, uses the \texttt{pexpect} library to solve this. It spawns the test case execution script (\texttt{model\_gen.py}) as a child process, but wraps the entire command with NVIDIA's \texttt{compute-sanitizer}. The controller monitors the output for specific error patterns that \texttt{compute-sanitizer} emits, such as lines beginning with \texttt{"========= Program hit cudaError"}, which indicate a GPU memory safety violation. When such a pattern is matched, it terminates the process and archives the logs and the triggering parameters for reproduction.

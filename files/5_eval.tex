@@ -1,0 +1,79 @@
+\section{Evaluation}
+\label{sec:eval}
+
+In this section, we evaluate the effectiveness and efficiency of GPU-Fuzz. We aim to answer the following research questions (RQs):
+\begin{itemize}
+    \item \textbf{RQ1:} How effective is GPU-Fuzz in discovering real-world bugs in major deep learning frameworks?
+    \item \textbf{RQ2:} How efficient is the structured generative fuzzing strategy of GPU-Fuzz?
+\end{itemize}
+
+\subsection{Experimental Setup}
+\label{sec:setup}
+All experiments were conducted on a server with the configuration detailed in Table~\ref{tbl:setup}. We established isolated Conda environments for each of the three target frameworks---PyTorch, TensorFlow, and PaddlePaddle---to manage their specific dependencies. The core hardware, operating system, and NVIDIA driver were consistent across all tests.
+
+\begin{table}[h!]
+\centering
+\caption{Experimental Environment Configuration.}
+\label{tbl:setup}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Component} & \textbf{Specification} \\ \midrule
+\multicolumn{2}{@{}l}{\textbf{Hardware}} \\
+\hspace{1em}CPU & 2 x Intel Xeon Silver 4510 (24 cores / 48 threads total) \\
+\hspace{1em}GPU & NVIDIA H100 PCIe \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Software (Common)}} \\
+\hspace{1em}Operating System & Ubuntu 24.04.2 LTS \\
+\hspace{1em}NVIDIA Driver & 580.82.07 \\
+\hspace{1em}CUDA Runtime & 12.8.93 \\
+\hspace{1em}Python & 3.11.13 \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Frameworks (in separate Conda environments)}} \\
+\hspace{1em}PyTorch & PyTorch 2.3.1+cu121 with cuDNN 8.9.2.26 \\
+\hspace{1em}TensorFlow & 2.20.0, with cuDNN 9.13.0.50 \\
+\hspace{1em}PaddlePaddle & 2.6.1 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+
+\subsection{Bug Discovery Effectiveness}
+
+Over the course of our evaluation, GPU-Fuzz discovered a total of 14 unique, previously unknown bugs across the three frameworks. Table~\ref{tbl:bugs} presents a summary of these findings. The bugs span a range of failure modes, from low-level memory corruption to API-level exceptions. We identified 8 distinct memory access violations (e.g., out-of-bounds or misaligned reads/writes). Among these, 6 were silent memory corruptions (poc2, 5, 6, 7, 8, 14) that do not trigger any API-level crash and are only detectable with specialized tools like \texttt{compute-sanitizer}. At the time of writing, we have reported all findings by opening issues in the corresponding repositories.
+
+\begin{table*}[htbp]
+\centering
+\caption{Summary of Bugs Discovered by GPU-Fuzz.}
+\label{tbl:bugs}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llllll@{}}
+\toprule
+\textbf{ID} & \textbf{Framework} & \textbf{Operator} & \textbf{Bug Type} & \textbf{Root Cause} & \textbf{Failure Mode} \\ \midrule
+poc1 & PyTorch & \texttt{conv\_transpose2d} & OOB Global Write & Incorrect grid dimension calculation & GPU-Level Exception (CUBLAS) \\
+poc2 & PyTorch & \texttt{bmm\_sparse} & Misaligned Global Write & Incorrect pointer arithmetic in CUSPARSE & Silent Memory Corruption \\
+poc3 & PaddlePaddle & \texttt{conv2d\_transpose} & Precondition Violation & Integer overflow in tensor dimension calc. & CPU-Side Assert \\
+poc4 & PaddlePaddle & \texttt{conv3d\_transpose} & Illegal Instruction & Invalid parameters passed to cuDNN kernel & GPU-Level Exception (cuDNN) \\
+poc5 & PyTorch & \texttt{adaptive\_avg\_pool2d} & OOB Global Write & Flawed boundary checks in CUDA kernel & Silent Memory Corruption \\
+poc6 & PyTorch & \texttt{replication\_pad2d} & OOB Global Write & Incorrect grid dimension calculation & Silent Memory Corruption \\
+poc7 & PyTorch & \texttt{adaptive\_max\_pool2d} & OOB Global Write & Flawed boundary checks in CUDA kernel & Silent Memory Corruption \\
+poc8/9 & TensorFlow & \texttt{Conv2D} & OOB Global Read & Incorrect index calculation in kernel & Silent Read / Downstream Crash \\
+poc11 & TensorFlow & \texttt{Conv2D} & Integer Overflow & Overflow in launch config calculation & CPU-Side Assert \\
+poc12 & PaddlePaddle & \texttt{conv2d\_transpose} & Bad API Parameter & Invalid parameter combination passed to cuDNN & GPU-Level Exception (cuDNN) \\
+poc13 & PaddlePaddle & \texttt{conv2d\_transpose} & Invalid Launch Config & Incorrect grid/block dimension calculation & GPU-Level Exception (CUDA) \\
+poc14 & PyTorch & \texttt{conv\_transpose3d} & OOB Shared Read & Incorrect index calculation for shared memory & Silent Memory Corruption \\
+poc15 & PyTorch & \texttt{reflection\_pad1d} & Invalid Launch Config & Integer overflow in \texttt{torch.compile} symint logic & GPU-Level Exception (CUDA) \\
+\bottomrule
+\end{tabular}%
+}
+\end{table*}
+
+\parh{Bug Patterns.} Our findings reveal important patterns across three distinct failure modes. (1) The most critical category is \textit{Silent Memory Corruption}, where out-of-bounds or misaligned memory access occurs without causing any API-level error. These are the most insidious bugs as they can lead to silent data corruption and were only detectable with \texttt{compute-sanitizer}. (2) The second category is \textit{GPU-Level Exceptions}, where invalid parameters or configurations cause CUDA, cuDNN, or CUBLAS libraries to return an error, which is then typically caught and reported by the framework. (3) The final category is \textit{CPU-Side Asserts}, where issues like integer overflows occur on the CPU during the calculation of kernel parameters, preventing the GPU launch altogether. A common root cause across all frameworks was incorrect grid dimension calculations or flawed boundary checks, with transposed convolutions being particularly error-prone.
+
+\parh{Bug Reproduction.} To aid in fixing these bugs, GPU-Fuzz logs the parameters, random seed, and input tensors for each test. This enables our scripts to deterministically reproduce the exact failure state, providing developers with a reliable and minimal test case and significantly reducing the time required for analysis.
+
+The results clearly demonstrate that GPU-Fuzz is highly effective at finding critical, real-world bugs. Its ability to generate semantically valid inputs allows it to penetrate the framework's defenses and stress-test the complex, often manually-optimized CUDA code in the backend, which remains a significant source of vulnerabilities.
+
+\subsection{Efficiency of Constraint-Based Fuzzing }
+To quantitatively validate our approach, we are conducting a comparative study against NNSmith, a state-of-the-art structure-level fuzzer. Both fuzzers are run under identical conditions with \texttt{compute-sanitizer} as the oracle. Our hypothesis is that GPU-Fuzz will detect significantly more GPU memory errors over a fixed period (e.g., 48 GPU-hours), as NNSmith's network-level focus is not designed to explore the specific parameter boundary conditions that trigger these vulnerabilities. This experiment will provide concrete evidence for the complementary nature of parameter-level and structure-level fuzzing.

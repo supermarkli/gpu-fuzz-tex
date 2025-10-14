@@ -1,0 +1,7 @@
+\section{Conclusion}
+\label{sec:conclusion}
+In this paper, we presented \textsc{Gpu-Fuzz}, a constraint-guided fuzzing system designed to uncover memory-related vulnerabilities in GPU-accelerated deep learning operators. We introduced a parameter-level fuzzing approach to address a critical gap left by existing structure-level fuzzers, which primarily target compiler logic errors. By modeling operator semantics as formal constraints, our system systematically generates valid test cases that probe boundary conditions prone to memory errors.
+
+Our extensive evaluation demonstrates that this constraint-based approach is highly effective. GPU-Fuzz successfully discovered 14 unique, previously unknown bugs in major frameworks like PyTorch, TensorFlow, and PaddlePaddle, the majority of which were critical silent memory errors, undetectable at the Python API level and only discoverable through low-level monitoring.
+
+The success of \textsc{Gpu-Fuzz} demonstrates a key takeaway for the security of modern AI systems: comprehensive testing requires a two-pronged approach. Both structure-level fuzzing to secure the compiler stack and parameter-level fuzzing to secure the underlying kernels are necessary and complementary. By making our tool and the discovered bugs publicly available, we hope to provide a valuable resource for developers and researchers working to improve the reliability and security of these foundational software systems.

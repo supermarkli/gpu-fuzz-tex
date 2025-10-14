@@ -1,8 +1,0 @@
-\section{Related Work}
-\label{sec:related_work}
-
-The security of deep learning (DL) frameworks is a critical research area. Our work is positioned at the intersection of fuzzing for DL frameworks and GPU systems.
-
-Prior work in DL fuzzing has focused on bridging the semantic gap to generate valid inputs. While API-level fuzzers like \textbf{FreeFuzz}~\cite{freefuzz} and \textbf{DeepREL}~\cite{deeprel} learn API parameters from code, and LLM-driven fuzzers like \textbf{TitanFuzz}~\cite{titanfuzz} and \textbf{FlashFuzz}~\cite{flashfuzz} generate plausible high-level code, they often miss the boundary conditions that our constraint-solving approach is designed to systematically explore. GPU-Fuzz distinguishes itself by adopting a formal methods approach. It translates the mathematical rules of DL operators into formal constraints and uses an SMT solver (Z3) to generate inputs that are provably valid. This allows for exceptional effectiveness in stress-testing the low-level GPU compute kernels, which is our primary target.
-
-Other research targets the GPU software stack directly. Compiler fuzzers like \textbf{CUDAsmith}~\cite{cudasmith} and \textbf{GraphicsFuzz}~\cite{graphicsfuzz} are vital for ensuring toolchain integrity but do not test the hand-written CUDA kernels within DL frameworks. Similarly, driver-level fuzzers such as \textbf{GLeeFuzz}~\cite{gleefuzz} and \textbf{Moneta}~\cite{moneta} test the GPU stack from a different angle. In contrast, GPU-Fuzz specifically targets the attack surface exposed by high-level DL operators, using the frameworks as a vehicle to reach the deep computational logic within the GPU kernels.

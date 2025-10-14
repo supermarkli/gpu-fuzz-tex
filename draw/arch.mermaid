@@ -1,24 +1,24 @@
 graph TD
-    subgraph "1. Test Case Generation"
-        A[Constraint Library<br/>(Operator Semantics)] --> B{Fuzzing Loop};
-        B -- "Select Operator &<br/>Randomize Targets" --> C[Z3 Solver];
+    subgraph "1. Constrained-Random Stimulus Generation"
+        A["Constraint Library<br/>(Operator Semantics in gen/ops.py)"] --> B{"Fuzzing Engine<br/>(in controller.py)"};
+        B -- "Select Operator &<br/>Randomize Targets" --> C["Constraint Solver"];
         C -- "Solve for Valid<br/>Parameters & Shapes" --> B;
-        B -- "Generated Parameters (JSON)" --> D[Cross-Framework<br/>Executor];
+        B -- "Abstract Stimulus (JSON)" --> D["Stimulus Materializer<br/>(in model_gen.py)"];
     end
 
-    subgraph "2. Execution & Monitoring"
-        D -- "Materialize for<br/>PyTorch/TF/Paddle" --> E[Runnable Code +<br/>Randomized Tensors];
+    subgraph "2. Execution & Runtime Verification"
+        D -- "Materialize for<br/>PyTorch/TF/Paddle" --> E["Concrete Stimulus<br/>(Runnable Code + Tensors)"];
         E -- "Execute on GPU" --> F((GPU Hardware));
-        G[compute-sanitizer<br/>(Test Oracle)] -- "Monitors for<br/>Memory Errors" --> F;
+        G["Runtime Verification Oracle<br/>(compute-sanititizer)"] -- "Monitors for<br/>Memory Safety Violations" --> F;
     end
 
-    subgraph "3. Crash Triage & Reproduction"
-        G -- "Crash Detected!" --> H{Automated Logging};
+    subgraph "3. Bug Triage & Reproduction"
+        G -- "Violation Detected!" --> H{"Automated Logging"};
         E -- "Save Input Tensors" --> H;
-        D -- "Save Parameters" --> H;
-        H --> I[Complete Crash Record<br/>(JSON + Tensors)];
-        I --> J[PoC Generation Script];
-        J -- "Generates" --> K[Standalone Reproducer<br/>(poc.py)];
+        D -- "Save Abstract Stimulus" --> H;
+        H --> I["Full Stimulus Trace<br/>(JSON + Tensors)"];
+        I --> J["Reproducer Generator"];
+        J -- "Generates" --> K["Standalone Reproducer<br/>(e.g., poc/poc1.py)"];
     end
 
     style F fill:#9f6,stroke:#333,stroke-width:2px

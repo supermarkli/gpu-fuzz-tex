@@ -1,0 +1,17 @@
+\section{Preliminary and Motivation}
+\label{sec:bg}
+
+\subsection{Background}
+GPU kernels, typically written in CUDA, are susceptible to various memory errors. Our work focuses on critical bugs such as illegal memory accesses (out-of-bounds reads/writes), misaligned memory accesses, and race conditions, which can lead to silent data corruption or system crashes.
+
+To detect these low-level errors, we use NVIDIA's \texttt{compute-sanitizer} as our primary test oracle. It is a powerful runtime tool that instruments GPU code to check for memory safety violations. When an error is detected, it terminates the application and provides a detailed report, enabling us to identify bugs that do not cause crashes at the API level.
+
+\subsection{Motivation}
+
+Our research is motivated by a critical gap in existing fuzzing methodologies for deep learning systems.
+
+\parh{Compiler-Centric Focus of Existing Fuzzers.} State-of-the-art fuzzers for DL frameworks, such as NNSmith, have primarily focused on testing the compiler stack. Their methodology involves generating structurally valid neural networks to uncover logical inconsistencies and wrong-computation bugs that arise during graph-level optimizations. While highly effective for discovering compiler bugs, this network-level perspective is not designed to probe for low-level vulnerabilities within the CUDA kernels of individual operators.
+
+\parh{The Operator-Level Blind Spot for Memory Errors.} GPU memory errors—such as out-of-bounds access or misaligned addressing—are not typically triggered by the high-level network architecture. Instead, they are instigated by specific, often boundary-value, combinations of an operator's parameters, including tensor shapes, data types, strides, and padding. These parameters directly dictate the memory access patterns within a CUDA kernel. Consequently, fuzzers that operate at the network structure level have a fundamental blind spot: they do not systematically explore the intricate parameter space of individual operators where these critical memory-related bugs reside.
+
+These observations reveal the need for a paradigm shift in fuzzing for GPU security. We require a fuzzer that moves beyond the network structure to focus directly on the operator level. This motivates the design of GPU-Fuzz, a system engineered to systematically explore the operator parameter space to uncover memory safety violations in low-level CUDA kernels.
