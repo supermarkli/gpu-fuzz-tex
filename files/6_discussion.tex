@@ -1,7 +1,9 @@
 \section{Discussion}
 \label{sec:discussion}
-While our results demonstrate the effectiveness of GPU-Fuzz, we acknowledge several limitations and areas for future work.
+While our results demonstrate the effectiveness of \textsc{GPU-Fuzz}, we acknowledge several limitations and areas for future work.
 
-\parh{Manual Modeling Effort.} The quality of GPU-Fuzz depends on its constraint library. Our current library supports 11 operator families, but this is a subset of the hundreds of operators available. Extending coverage requires manual effort to model constraints (100-150 LoC per family). Future work could explore semi-automating constraint extraction from framework documentation to improve scalability.
+\parh{Manual Modeling Effort.} 
+The quality of \textsc{GPU-Fuzz} depends on its constraint library. Our current library supports 11 operator families, but this is a subset of the hundreds of operators available. Extending coverage requires manual effort to model constraints (100-150 LoC per family). Future work could explore semi-automating constraint extraction from framework documentation to improve scalability.
 
-\parh{Limited Oracle.} Our primary oracle, \texttt{compute-sanitizer}, excels at finding memory errors but cannot detect silent numerical correctness issues or performance regressions. Differential fuzzing against a trusted CPU implementation is a promising direction for a more comprehensive oracle.
+\parh{Limited Oracle.} 
+Our primary oracle, compute-sanitizer, excels at finding memory errors but cannot detect silent numerical correctness issues or performance regressions. Differential fuzzing against a trusted CPU implementation is a promising direction for a more comprehensive oracle.

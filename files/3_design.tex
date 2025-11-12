@@ -1,64 +1,56 @@
 \section{System Design}
 \label{sec:design}
 
-This section details the architecture of GPU-Fuzz. As illustrated in Figure~\ref{fig:arch}, the system is designed around a data flow that seamlessly connects constraint-based test case generation with cross-framework execution, monitoring, and log-based reproduction.
+This section details the architecture of \textsc{GPU-Fuzz}. As illustrated in Figure~\ref{fig:arch}, the system consists of three main phase, operator modeling, constraint-based testcase generation and cross-framework execution.
 
 \begin{figure}[htbp]
 	\centering
-	\resizebox{0.7\linewidth}{!}{
-	\begin{tikzpicture}[
-		node distance=1.5cm,
-		% Styles
-		box/.style={rectangle, draw=black, thick, fill=white, minimum height=1.2cm, text width=4.5cm, text centered},
-		artifact/.style={box, fill=black!5, rounded corners},
-		final_artifact/.style={artifact, fill=black!15},
-		arrow/.style={->, >=stealth, thick}
-	]
-
-	% --- Main linear flow ---
-	\node[box] (fuzz_engine) {Fuzzing Engine};
-	\node[artifact] (param_config) [below=of fuzz_engine] {Parameter Configuration};
-	\node[box] (materializer) [below=of param_config] {Test Case Materializer};
-	\node[artifact] (concrete_test_case) [below=of materializer] {Concrete Test Case};
-
-	% --- Execution side-branch ---
-	\node[box] (gpu) [right=3cm of concrete_test_case] {GPU Hardware};
-	\node[box] (oracle) [above=of gpu] {Runtime Analysis Tool};
-
-	% --- Final output ---
-	\node[final_artifact] (reproducer) [below=2.5cm of concrete_test_case] {Standalone Reproducer};
-
-	% --- ARROWS ---
-	% Main data flow
-	\draw[arrow] (fuzz_engine) -- (param_config);
-	\draw[arrow] (param_config) -- (materializer);
-	\draw[arrow] (materializer) -- (concrete_test_case);
-
-	% Execution flow
-	\draw[arrow] (concrete_test_case) -- (gpu);
-	\draw[arrow] (oracle) -- (gpu) node[midway, right] {Monitors};
-	
-	% Connection to reproducer
-	\draw[arrow] (concrete_test_case) -- (reproducer);
-
-	\end{tikzpicture}
-	} % end of resizebox
-	\caption{The architecture of the GPU-Fuzz system.}
+	\includegraphics[width=1\linewidth]{figs/arch}
+	\caption{The architecture of the \textsc{GPU-Fuzz} system.}
+	\Description{A diagram illustrating the architecture of the GPU-Fuzz system. }
 	\label{fig:arch}
 \end{figure}
 
-\subsection{Constraint Library and Operator Modeling}
-The foundation of GPU-Fuzz is its ability to generate semantically valid inputs. This is achieved through a Constraint Library that models the operational semantics of deep learning operators. For each target operator (e.g., convolution, pooling, matrix multiplication), we define a set of constraints that capture the legitimate relationships between its parameters, such as tensor shapes, data types, kernel sizes, strides, and padding. These constraints create a framework-agnostic representation of the operator's contract. This approach ensures that any test case generated is, by construction, guaranteed to pass the framework's initial validation checks.
+\subsection{Operator modeling.}
+\label{sec:modeling}
 
-\subsection{Constraint-based Test Case Generation}
-The core of the fuzzing loop resides in the test case generator. The process begins by randomly selecting an operator template from the Constraint Library. The generator then populates the template with randomized, but plausible, target dimensions and parameters. These parameters, along with the operator's formal constraints, are passed to a constraint solver. The solver's task is to find a concrete assignment of values that satisfies all constraints. The result is a complete set of valid parameters (e.g., \texttt{input\_shape}, \texttt{kernel\_size}, \texttt{stride}) and the corresponding output tensor shape, which together form a framework-agnostic parameter configuration.
+\textsc{GPU-Fuzz} models GPU operators through an abstraction layer that captures their parameter spaces and shape relationships. Each operator family (e.g., convolution, pooling, activation) is represented by a unified model that defines the interface for input/output shapes and parameter constraints.
+For operators with complex shape transformations, such as convolutions and pooling operations, we introduce symbolic variables using the Z3 SMT solver~\cite{de2008z3} to represent operator parameters. The abstraction allows us to model operators uniformly across different frameworks while preserving framework-specific semantics.
 
-For instance, consider a 2D convolution (\texttt{Conv2D}). The relationship between input height ($H_{in}$), output height ($H_{out}$), padding ($P$), kernel ($K$), dilation ($D$), and stride ($S$) is governed by the equation: $H_{out} = \lfloor (H_{in} + 2P - D \cdot (K - 1) - 1) / S \rfloor + 1$. Furthermore, for grouped convolutions, the number of input and output channels must both be divisible by the `groups` parameter. Our fuzzer translates these rules into a formal constraint system. It might generate a plausible $H_{in}$ and then task the solver with finding a consistent set of values for the remaining parameters that satisfy all interdependent constraints. This ensures the generated parameters are holistically consistent, a prerequisite for bypassing framework validation and testing the underlying kernel.
+\subsection{Constraint-based Testcase Generation}
+\label{sec:testcase}
 
-\subsection{Cross-Framework Execution and Monitoring}
-Once a set of valid parameters is generated, this parameter configuration is materialized into an executable script for a target framework (PyTorch, TensorFlow, or PaddlePaddle). This script creates the necessary tensors, populates them with random data, and invokes the operator on the GPU.
+\parh{Constraint solving.}\textsc{GPU-Fuzz} encodes operator semantics as constraints over symbolic variables through two layers: generic constraints and operator-specific constraints.
 
-The execution is monitored by NVIDIA's \texttt{compute-sanitizer}. This tool can detect a wide range of GPU-level errors, such as out-of-bounds memory accesses and race conditions, that would not typically cause a visible crash at the Python API level. When a violation is detected, \texttt{compute-sanitizer} terminates the process and generates a detailed report, which serves as our primary bug oracle.
+Generic constraints ensure basic validity: operator parameters (e.g., tensor dimensions) must be reasonable positive integers, and total I/O tensor memory must not exceed GPU limits.
 
-\subsection{Bug Reproducibility}
-To facilitate the validation and debugging of discovered vulnerabilities, \textsc{Gpu-Fuzz} systematically records the conditions that trigger each failure. This record encapsulates the target operator and framework, the specific input parameters (e.g., kernel size, stride), the shapes of all input tensors, and the random seed used for data generation. The raw input tensors are also preserved. This collection of artifacts provides a self-contained and deterministic reproducer for each bug, significantly simplifying the process of verification and root cause analysis for developers.
+Operator-specific constraints capture the mathematical relationships between input and output shapes. Figure~\ref{fig:constraint_modeling} illustrates that for a convolution operator, the output size along each spatial dimension follows the formula~\cite{dumoulin2016guide}:
+\[
+H_{\text{out}} = \frac{H_{\text{in}} + 2P - D(K-1) - 1}{S} + 1
+\]
+where $H_{\text{in}}$ and $H_{\text{out}}$ denote the input and output sizes, $P$ is padding, $D$ is dilation, $K$ is kernel size, and $S$ is stride. Additional constraints ensure semantic correctness, such as requiring the input size to be larger than the kernel size.
+
+\textsc{GPU-Fuzz} uses Z3's SMT solver~\cite{de2008z3} to find satisfying assignments for all symbolic variables. The solver returns a model that assigns concrete values to each parameter, which are then used to instantiate the operator for testcase generation.
+
+\begin{figure}[htbp]
+	\centering
+	\hspace*{-0.2cm}\includegraphics[width=0.9\columnwidth]{figs/constraint}
+	\caption{Constraint modeling for convolution operators.}
+	\Description{A diagram illustrating the constraint modeling process for convolution operators.}
+	\label{fig:constraint_modeling}
+\end{figure}
+
+\parh{Parameter space exploration.}To systematically explore the parameter space, \textsc{GPU-Fuzz} employs an iterative constraint-guided search strategy. After obtaining a solution from the solver, the system randomly selects one symbolic variable from the current model and adds constraints that exclude its current value. Specifically, the system adds both a hash-based constraint and a direct value constraint: the hash constraint helps the solver efficiently prune value ranges with better dispersion, while the direct constraint ensures the new solution differs from the current one. This dual-constraint approach improves solver efficiency by providing better value distribution guidance, while the incremental constraint addition forces the solver to find different solutions in subsequent iterations, effectively guiding the search toward unexplored regions of the parameter space. Figure~\ref{fig:exploration} illustrates this process.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=1\linewidth]{figs/exploration}
+	\caption{An example of the iterative parameter space exploration. At each step, a parameter is randomly selected and a new constraint that excludes its current value is incrementally added to guide the search for the next solution.}
+	\Description{A diagram illustrating the iterative parameter space exploration process.}
+	\label{fig:exploration}
+\end{figure}
+
+\subsection{Cross-framework Execution}
+\label{sec:execution}
+
+\textsc{GPU-Fuzz} detects framework-specific GPU bugs by executing generated test cases across multiple deep learning frameworks (PyTorch~\cite{paszke2019pytorch}, PaddlePaddle~\cite{ma2019paddlepaddle}, and TensorFlow~\cite{abadi2016tensorflow}). Its execution pipeline involves materializing abstract operator representations into framework-specific API calls, handling nuances like parameter naming and data formats. An execution controller orchestrates this by iteratively generating configurations, materializing, and executing them on GPUs. NVIDIA Compute Sanitizer~\cite{nvidia2023compsan} wraps each execution to monitor for GPU memory errors and kernel failures (e.g., out-of-bounds). This cross-framework approach facilitates differential testing, identifying inconsistencies and framework-specific bugs by executing semantically equivalent test cases across different frameworks.

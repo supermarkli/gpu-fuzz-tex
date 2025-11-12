@@ -1,0 +1,93 @@
+\begin{tikzpicture}[
+    node distance=1cm,
+    param/.style={rectangle, draw=black!70, fill=gray!15, minimum width=2cm, minimum height=0.65cm, text centered, font=\small, rounded corners=2pt},
+    formula/.style={rectangle, draw=black!70, fill=blue!8, minimum width=4.2cm, minimum height=1.1cm, text centered, font=\footnotesize, rounded corners=2pt},
+    symbol/.style={rectangle, draw=black!70, fill=green!8, minimum width=1.6cm, minimum height=0.55cm, text centered, font=\ttfamily\footnotesize, rounded corners=2pt},
+    arrow/.style={->, >=stealth, thick, black!60},
+    label/.style={font=\bfseries\small}
+]
+
+% Left column: Operator Parameters
+\node[param] (in_size) {$H_{in}$: Input};
+\node[param, below of=in_size] (kernel) {$K$: Kernel};
+\node[param, below of=kernel] (stride) {$S$: Stride};
+\node[param, below of=stride] (padding) {$P$: Padding};
+\node[param, below of=padding] (dilation) {$D$: Dilation};
+\node[param, below of=dilation] (groups) {$g$: Groups};
+
+% Determine column positions
+% First set the right column x position (positioned relative to left column)
+\coordinate (right_col_x) at ($(in_size.east) + (8cm,0)$);
+% Calculate the middle column x position (centered between left and right columns)
+\coordinate (left_col_right) at (in_size.east);
+\coordinate (middle_col_x) at ($(left_col_right)!0.45!(right_col_x)$);
+
+% Middle column: Constraint Formulas
+% Position the middle column centered between left and right columns
+\node[formula, at=(kernel -| middle_col_x), anchor=center] (conv_formula) {
+    \begin{minipage}{4.3cm}
+    \centering
+    \textbf{Convolution}\\[0.6em]
+    $H_{out} = \frac{H_{in} + 2P - D(K-1) - 1}{S} + 1$
+    \end{minipage}
+};
+
+\node[formula, below of=conv_formula, yshift=-0.4cm] (boundary_formula) {
+    \begin{minipage}{4.3cm}
+    \centering
+    \textbf{Boundary}\\[0.4em]
+    $K < H_{in}$, $P < H_{in}$
+    \end{minipage}
+};
+
+\node[formula, below of=boundary_formula, yshift=-0.55cm] (group_formula) {
+    \begin{minipage}{4.3cm}
+    \centering
+    \textbf{Group}\\[0.4em]
+    $in\_ch \bmod g = 0$\\[0.3em]
+    $out\_ch \bmod g = 0$
+    \end{minipage}
+};
+
+% Right column: Z3 Symbolic Variables
+% Use below of with compact spacing
+\node[symbol, at=(in_size -| right_col_x)] (z3_in) {\texttt{in\_0}};
+\node[symbol, below of=z3_in, node distance=0.85cm] (z3_k) {\texttt{k\_0}};
+\node[symbol, below of=z3_k, node distance=0.85cm] (z3_s) {\texttt{s\_0}};
+\node[symbol, below of=z3_s, node distance=0.85cm] (z3_p) {\texttt{p\_0}};
+\node[symbol, below of=z3_p, node distance=0.85cm] (z3_d) {\texttt{d\_0}};
+\node[symbol, below of=z3_d, node distance=0.85cm] (z3_g) {\texttt{g}};
+\node[symbol, below of=z3_g, node distance=0.85cm] (z3_out) {\texttt{out\_0}};
+
+% Arrows from parameters to formulas
+\draw[arrow] (in_size.east) -- (conv_formula.west);
+\draw[arrow] (kernel.east) -- (conv_formula.west);
+\draw[arrow] (stride.east) -- (conv_formula.west);
+\draw[arrow] (padding.east) -- (conv_formula.west);
+\draw[arrow] (dilation.east) -- (conv_formula.west);
+\draw[arrow] (in_size.east) -- (boundary_formula.west);
+\draw[arrow] (kernel.east) -- (boundary_formula.west);
+\draw[arrow] (padding.east) -- (boundary_formula.west);
+\draw[arrow] (groups.east) -- (group_formula.west);
+
+% Arrows from formulas to Z3 symbols
+\draw[arrow] (conv_formula.east) -- (z3_in.west);
+\draw[arrow] (conv_formula.east) -- (z3_k.west);
+\draw[arrow] (conv_formula.east) -- (z3_s.west);
+\draw[arrow] (conv_formula.east) -- (z3_p.west);
+\draw[arrow] (conv_formula.east) -- (z3_d.west);
+\draw[arrow] (conv_formula.east) -- (z3_out.west);
+\draw[arrow] (boundary_formula.east) -- (z3_in.west);
+\draw[arrow] (boundary_formula.east) -- (z3_k.west);
+\draw[arrow] (boundary_formula.east) -- (z3_p.west);
+\draw[arrow] (group_formula.east) -- (z3_g.west);
+
+% Column labels - align horizontally at the same y-coordinate
+% First create a reference point for alignment
+\coordinate (label_y) at ([yshift=0.5cm] in_size.north);
+
+\node[label, at=(label_y -| in_size)] {Parameters};
+\node[label, at=(label_y -| conv_formula)] {Constraints};
+\node[label, at=(label_y -| z3_in)] {Variables};
+
+\end{tikzpicture}

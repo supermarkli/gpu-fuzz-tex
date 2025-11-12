@@ -1,0 +1,48 @@
+\section{Background and Motivation}
+\label{sec:bg}
+
+\subsection{GPU Architecture}
+Modern GPUs are massively parallel processors designed for high-throughput computation. Their architecture is built around a collection of Streaming Multiprocessors (SMs), each capable of executing hundreds of threads concurrently. 
+The CUDA programming model abstracts this hardware~\cite{nickolls2008scalable}, organizing threads into a hierarchy of grids, blocks, and warps. 
+This parallelism is supported by a complex memory hierarchy~\cite{hong2010integrated}, comprising high-bandwidth global memory, low-latency shared memory private to each SM, and per-thread local memory and registers. 
+Writing efficient GPU code requires developers to manually manage data placement and movement across this hierarchy~\cite{guide2020cuda}. 
+The complexity of this task, especially the intricate pointer arithmetic required for optimal memory access patterns, makes GPU kernels highly susceptible to memory errors such as out-of-bounds access and race conditions~\cite{kamath2021iguard}.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=\columnwidth]{figs/gpu.pdf}
+	\caption{GPU architecture and memory layout.}
+	\Description{A diagram illustrating GPU hardware architecture with Streaming Multiprocessors and the memory layout within a Thread Block.}
+	\label{fig:gpu_arch}
+\end{figure}
+
+\subsection{Deep Learning Operators}
+Deep learning (DL) frameworks like PyTorch~\cite{paszke2019pytorch} and TensorFlow~\cite{abadi2016tensorflow} are built around a rich library of fundamental computational units called operators. 
+These operators, such as convolution, pooling, matrix multiplication, and activation functions~\cite{chetlur2014cudnn}, serve as the elemental building blocks for constructing neural networks. 
+While users interact with them through simple, high-level Python APIs, the underlying reality is far more complex. Each operator is backed by one or more highly-optimized, low-level programs known as kernels~\cite{chetlur2014cudnn}, which are executed on the GPU.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.7\columnwidth]{figs/conv.pdf}
+	\caption{An illustration of a convolution operator.}
+	\Description{A diagram showing how a convolution kernel operates on input data to produce output, demonstrating the fundamental convolution operator in deep learning.}
+	\label{fig:conv}
+\end{figure}
+
+The complexity arises from the vast parameter space of each operator. 
+A single convolution operator~\cite{dumoulin2016guide}, for instance, is governed by a multitude of parameters beyond the input tensor itself: kernel size, stride, padding, dilation, and channel groups. 
+These parameters are not independent; they are bound by a complex set of semantic and mathematical constraints that dictate valid combinations and determine the output tensor's properties. 
+To achieve state-of-the-art performance, framework developers implement these kernels manually in CUDA C++, employing sophisticated techniques like shared memory tiling and intricate pointer arithmetic to maximize data throughput~\cite{guide2020cuda}. 
+This manual, performance-driven optimization often bypasses safer, high-level abstractions, making the kernel code a fertile ground for subtle memory errors~\cite{kamath2021iguard} that are triggered only by specific, often obscure, parameter configurations.
+
+\subsection{Motivation}
+GPU memory bugs represent a severe and often silent threat to the reliability and security of AI systems~\cite{papadimitriou2023silent}. 
+These bugs can cause catastrophic failures in mission-critical applications like medical imaging~\cite{ronneberger2015u} and autonomous driving~\cite{lang2019pointpillars}, or be exploited for security attacks~\cite{pavlidakis2024guardian}. 
+
+State-of-the-art DL fuzzers focus on the compiler stack, generating valid neural networks to find bugs~\cite{liu2023nnsmith,ma2023fuzzing}. 
+This network-level approach is ill-suited for finding low-level memory errors in GPU kernels. 
+Such bugs are not typically triggered by network architecture, but by specific, often boundary-value, combinations of an operator's parameters (e.g., tensor shapes, strides). 
+This leaves a fundamental blind spot: existing fuzzers like NNSmith~\cite{liu2023nnsmith}  do not systematically explore the intricate parameter space of individual operators where these memory bugs reside.
+
+This observation reveals the need for a paradigm shift toward operator-level fuzzing. 
+We introduce \textsc{GPU-Fuzz}, a system designed to explore the operator parameter space to uncover memory bugs in low-level CUDA kernels.

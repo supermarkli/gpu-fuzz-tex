@@ -19,10 +19,8 @@
 
 \newcommand{\bug}[1]{\noindent\textit{#1}}
 
-\newcommand{\parh}[1]{\vspace{0.3em}\noindent\textbf{#1}}
+\newcommand{\parh}[1]{\noindent\textbf{#1}}
 \newcommand{\parhs}[1]{\noindent\underline{\textit{#1}}}
-%\newcommand{\parh}[1]{\smallskip\noindent\textbf{#1}}
-\usepackage[numbers,sort&compress]{natbib}
 \usepackage{threeparttable}
 \usepackage{xspace}
 \usepackage{amsmath,amsfonts}
@@ -94,7 +92,7 @@
 
 \usepackage{xcolor}
 
-\usepackage{minted}
+%\usepackage{minted}  % Commented out: not used and requires pygmentize
 
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
@@ -135,3 +133,9 @@
 }
 
 %\renewcommand{\baselinestretch}{0.986}
+
+% Reduce spacing around floats (figures and tables)
+\setlength{\textfloatsep}{8pt plus 1.0pt minus 2.0pt}  % Space between float and text at top/bottom
+\setlength{\intextsep}{5pt plus 1.0pt minus 2.0pt}     % Space above and below floats in text
+\setlength{\abovecaptionskip}{4pt}                      % Space above caption
+\setlength{\belowcaptionskip}{2pt}                      % Space below caption
