@@ -1,36 +1,23 @@
 \section{System Design}
 \label{sec:design}
 
-This section details the architecture of \textsc{GPU-Fuzz}. As illustrated in Figure~\ref{fig:arch}, the system consists of three main phase, operator modeling, constraint-based testcase generation and cross-framework execution.
+This section details the architecture of \textsc{GPU-Fuzz}. As illustrated in \F~\ref{fig:arch}, the system consists of three main phases: operator modeling, constraint-based test case generation, and cross-framework execution.
 
 \begin{figure}[htbp]
 	\centering
+	\vspace{-0.2em}
 	\includegraphics[width=1\linewidth]{figs/arch}
+	\vspace{-0.4em}
 	\caption{The architecture of the \textsc{GPU-Fuzz} system.}
 	\Description{A diagram illustrating the architecture of the GPU-Fuzz system. }
 	\label{fig:arch}
+	\vspace{-0.2em}
 \end{figure}
 
 \subsection{Operator modeling.}
 \label{sec:modeling}
 
-\textsc{GPU-Fuzz} models GPU operators through an abstraction layer that captures their parameter spaces and shape relationships. Each operator family (e.g., convolution, pooling, activation) is represented by a unified model that defines the interface for input/output shapes and parameter constraints.
-For operators with complex shape transformations, such as convolutions and pooling operations, we introduce symbolic variables using the Z3 SMT solver~\cite{de2008z3} to represent operator parameters. The abstraction allows us to model operators uniformly across different frameworks while preserving framework-specific semantics.
-
-\subsection{Constraint-based Testcase Generation}
-\label{sec:testcase}
-
-\parh{Constraint solving.}\textsc{GPU-Fuzz} encodes operator semantics as constraints over symbolic variables through two layers: generic constraints and operator-specific constraints.
-
-Generic constraints ensure basic validity: operator parameters (e.g., tensor dimensions) must be reasonable positive integers, and total I/O tensor memory must not exceed GPU limits.
-
-Operator-specific constraints capture the mathematical relationships between input and output shapes. Figure~\ref{fig:constraint_modeling} illustrates that for a convolution operator, the output size along each spatial dimension follows the formula~\cite{dumoulin2016guide}:
-\[
-H_{\text{out}} = \frac{H_{\text{in}} + 2P - D(K-1) - 1}{S} + 1
-\]
-where $H_{\text{in}}$ and $H_{\text{out}}$ denote the input and output sizes, $P$ is padding, $D$ is dilation, $K$ is kernel size, and $S$ is stride. Additional constraints ensure semantic correctness, such as requiring the input size to be larger than the kernel size.
-
-\textsc{GPU-Fuzz} uses Z3's SMT solver~\cite{de2008z3} to find satisfying assignments for all symbolic variables. The solver returns a model that assigns concrete values to each parameter, which are then used to instantiate the operator for testcase generation.
+\textsc{GPU-Fuzz} models GPU operators through an abstraction layer that captures their parameter spaces and shape relationships. Each operator family (e.g., convolution, pooling) is represented by a unified model that defines the interface for input/output shapes and parameter constraints.
 
 \begin{figure}[htbp]
 	\centering
@@ -40,7 +27,37 @@ where $H_{\text{in}}$ and $H_{\text{out}}$ denote the input and output sizes, $P
 	\label{fig:constraint_modeling}
 \end{figure}
 
-\parh{Parameter space exploration.}To systematically explore the parameter space, \textsc{GPU-Fuzz} employs an iterative constraint-guided search strategy. After obtaining a solution from the solver, the system randomly selects one symbolic variable from the current model and adds constraints that exclude its current value. Specifically, the system adds both a hash-based constraint and a direct value constraint: the hash constraint helps the solver efficiently prune value ranges with better dispersion, while the direct constraint ensures the new solution differs from the current one. This dual-constraint approach improves solver efficiency by providing better value distribution guidance, while the incremental constraint addition forces the solver to find different solutions in subsequent iterations, effectively guiding the search toward unexplored regions of the parameter space. Figure~\ref{fig:exploration} illustrates this process.
+As illustrated in \F~\ref{fig:constraint_modeling}, \textsc{GPU-Fuzz} encodes operator semantics into a set of constraint formulas with symbolic variables. 
+Take the convolution operator in \F~\ref{fig:constraint_modeling} as an example, its core constraint formula~\cite{dumoulin2016guide} is $H_{out} = \frac{H_{in} + 2P - D(K-1) - 1}{S} + 1$, where $H_{in}$ and $H_{out}$ denote the input and output sizes, $P$ is padding, $D$ is dilation, $K$ is kernel size, and $S$ is stride. 
+Only after an input satisfies the constraint formulas, can the operator be correctly instantiated and executed. 
+Aside from this core constraint, there are also various additional constraints (e.g., $H_{in} > K$) to ensure the semantic correctness of the operator. 
+This constraint modeling approach allows us to effectively generate valid test cases for DL operators.
+
+To ensure correctness, we manually extract the constraint formulas from the documentation of each operator. It takes approximately a month for two authors to extract the constraint formulas from the documentation of each operator independently and then cross-check their results. 
+These two authors are experts in the field of deep learning and have a deep understanding of the semantics of each operator, which ensures the correctness of \textsc{GPU-Fuzz} to a great extent. In total, we extracted 45 constraints for 13 operators.
+
+\subsection{Constraint-based Test Case Generation}
+\label{sec:testcase}
+
+\parh{Constraint solving.}
+Once an operator is modeled according to its constraints, \textsc{GPU-Fuzz} employs Z3's SMT solver~\cite{de2008z3} to find a satisfying assignment for all symbolic variables. 
+As illustrated in \F~\ref{fig:constraint_solving}, to generate a test case for a convolution operator, the solver must find concrete values for $H_{out}$, $H_{in}$, $P$, $D$, $K$, and $S$ that satisfy the set of constraints shown in the figure. 
+In the case of \F~\ref{fig:constraint_solving}, a possible solution is $H_{out}=126$, $H_{in}=128$, $P=1$, $D=1$, $K=5$, and $S=1$.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=\columnwidth]{figs/constraint_solving}
+	\caption{Constraint solving process.}
+	\Description{A diagram illustrating how constraints are solved using Z3 SMT solver to generate concrete parameter values.}
+	\label{fig:constraint_solving}
+\end{figure}
+
+Although SMT solvers like Z3~\cite{de2008z3} effectively find a solution for the given constraints, they are not designed to systematically explore the entire parameter space. Specifically, solvers like Z3~\cite{de2008z3} tend to return a single boundary solution for the symbolic variables~(e.g., $x=0$ for $x\geq 0$), which is insufficient for a comprehensive fuzzing campaign. 
+To address this limitation, previous works like NNSmith~\cite{liu2023nnsmith} force Z3~\cite{de2008z3} to return multiple solutions by adding a periodic perturbation to the original constraint~(e.g., $x>2^n$).
+\textsc{GPU-Fuzz}, on the other hand, employs a novel constraint-guided search strategy to systematically explore the parameter space.
+
+\parh{Parameter space exploration.}
+To systematically explore the parameter space, \textsc{GPU-Fuzz} employs an iterative constraint-guided search strategy, as illustrated in \F~\ref{fig:exploration}. The process begins with an initial solution, $s1$ (e.g., $stride=10, kernel\_size=3$), found by the solver. At each iteration, the system randomly selects a parameter dimension to constrain. For instance, it might first select $stride$, adding constraints to exclude its current value, which guides the solver to a new solution like $s2$. In the next step, the system could randomly select $kernel\_size$, accumulating new constraints (e.g., $kernel\_size\neq 3$ and $h(kernel\_size)\neq h(3)$) upon the existing ones. This compels the solver to navigate towards unexplored regions, yielding another solution like $s3$. 
 
 \begin{figure}[htbp]
 	\centering
@@ -50,7 +67,30 @@ where $H_{\text{in}}$ and $H_{\text{out}}$ denote the input and output sizes, $P
 	\label{fig:exploration}
 \end{figure}
 
+Notably, to enhance both solver efficiency and solution diversity, we propose to incorporate not only direct value exclusion (e.g., $stride\neq 10$) but also hash-based constraints (e.g., $h(stride)\neq h(10)$). 
+The hash function transforms input values through a series of bit-mixing operations that introduce dispersion properties. 
+Specifically, the function applies alternating right-shift, XOR, and multiplication operations to ensure that even small changes in input values result in different hash values, effectively avoiding identity mapping and poor distribution. 
+The hash-based constraint complements the direct value exclusion by preventing the solver from exploring similar regions, which significantly improves solution diversity.
+
+This incremental strategy ensures that \textsc{GPU-Fuzz} can continuously and efficiently generate diverse test cases.
+
 \subsection{Cross-framework Execution}
 \label{sec:execution}
 
-\textsc{GPU-Fuzz} detects framework-specific GPU bugs by executing generated test cases across multiple deep learning frameworks (PyTorch~\cite{paszke2019pytorch}, PaddlePaddle~\cite{ma2019paddlepaddle}, and TensorFlow~\cite{abadi2016tensorflow}). Its execution pipeline involves materializing abstract operator representations into framework-specific API calls, handling nuances like parameter naming and data formats. An execution controller orchestrates this by iteratively generating configurations, materializing, and executing them on GPUs. NVIDIA Compute Sanitizer~\cite{nvidia2023compsan} wraps each execution to monitor for GPU memory errors and kernel failures (e.g., out-of-bounds). This cross-framework approach facilitates differential testing, identifying inconsistencies and framework-specific bugs by executing semantically equivalent test cases across different frameworks.
+\begin{figure}[htbp]
+	\centering
+	\vspace{-0.2em}
+	\includegraphics[width=\columnwidth]{figs/execution}
+	\vspace{-0.4em}
+	\caption{Cross-framework materialization example.}
+	\Description{A diagram illustrating how a generic model's parameters are materialized into framework-specific API calls for PyTorch, PaddlePaddle, and TensorFlow.}
+	\label{fig:execution}
+	\vspace{-0.2em}
+\end{figure}
+
+Once a valid set of parameters is generated, \textsc{GPU-Fuzz} executes it as a test case across multiple deep learning frameworks, including PyTorch~\cite{paszke2019pytorch}, PaddlePaddle~\cite{ma2019paddlepaddle}, and TensorFlow~\cite{abadi2016tensorflow}, to detect GPU memory bugs. 
+As illustrated in \F~\ref{fig:execution}, this process translates the abstract, framework-agnostic parameters from the solver into concrete parameters with specific API calls. 
+For instance, the generic \texttt{outch} parameter is mapped to \texttt{out\_channels} in PyTorch and \texttt{filters} in TensorFlow. 
+To detect memory errors and kernel failures, each execution is wrapped by NVIDIA's compute-sanitizer~\cite{nvidia2023compsan}. 
+This approach significantly improves the detection of memory errors.
+

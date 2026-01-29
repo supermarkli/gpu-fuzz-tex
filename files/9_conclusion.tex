@@ -1,5 +1,5 @@
 \section{Conclusion}
 \label{sec:conclusion}
-We introduced \textsc{GPU-Fuzz}, a constraint-guided fuzzer that aims to address the challenge of finding memory errors in deep learning operators. By shifting the focus from network structure to the operator parameter level, \textsc{GPU-Fuzz} explores boundary conditions that may trigger low-level vulnerabilities. 
+We introduced \textsc{GPU-Fuzz}, a constraint-guided fuzzer that aims to find memory errors in deep learning operators. By shifting the focus from network models to the operator parameter space, \textsc{GPU-Fuzz} explores boundary conditions that may trigger low-level vulnerabilities. 
 Our approach was able to uncover 13 previously unknown bugs in widely used frameworks such as PyTorch, TensorFlow, and PaddlePaddle, most of which were silent memory errors.  
-This work suggests that securing modern AI systems may benefit from a complementary strategy combining both structure-level and parameter-level fuzzing. We hope that by making our tool and findings publicly available, we can contribute to improving the reliability and security of these foundational technologies.
+This work suggests that securing modern AI systems may benefit from a complementary strategy combining both model and operator parameter space fuzzing. We hope that by making our tool and findings publicly available, we can contribute to improving the reliability and security of these foundational technologies.

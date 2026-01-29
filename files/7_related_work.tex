@@ -1,28 +1,8 @@
 \section{Related Work}
 \label{sec:related_work}
+Fuzzing for DL systems has received continuous attention over the past years~\cite{shen2021comprehensive}.
+To capture bugs from complicated modern DL compiler stacks, one of the effective approaches is generating valid neural network models. Works like NNSmith~\cite{liu2023nnsmith}, TVMFuzz~\cite{shen2021comprehensive}, and HirGen~\cite{ma2023fuzzing} pioneered this direction, proving effective at identifying compiler-related bugs, such as graph-level optimization issues and IR transformation errors.
+Following this, other works propose testing different components of the DL stack. LEMON~\cite{wang2020deep}, for example, tests DL library implementations by generating model variants to detect inconsistencies across different libraries. More recent studies, like Orion~\cite{harzevili2025history}, specifically focus on the API layer by generating test inputs guided by historical bug patterns.
+While effective, these approaches primarily operate at higher abstraction levels. They are not designed to systematically probe the low-level memory access patterns within the GPU kernels that execute the operators. Testing GPU kernels, in general, has its own line of research. GPUVerify~\cite{betts2012gpuverify} employs formal methods to verify kernel correctness by detecting data races and barrier divergence. DeepSmith~\cite{cummins2018compiler} generates random CUDA programs from scratch to stress-test the CUDA compiler~\cite{guide2020cuda} itself.
 
-Our work is positioned at the intersection of deep learning (DL) systems security and software testing, with a specific focus on uncovering memory-related bugs in GPU kernels.
-
-\subsection{Fuzzing for Deep Learning Systems}
-Fuzzing for DL systems can be categorized into structure-level, library-level, and API-level testing approaches~\cite{shen2021comprehensive}.
-
-\textbf{Structure-level fuzzers}, including NNSmith~\cite{liu2023nnsmith}, TVMFuzz~\cite{shen2021comprehensive}, and HirGen~\cite{ma2023fuzzing}, focus on generating valid neural network models to test the compiler stack (e.g., TVM~\cite{chen2018tvm}). These tools are effective at identifying compiler-related bugs, such as graph-level optimization issues and IR transformation errors. However, their network-centric view is not designed to systematically explore the operator parameter boundaries required to trigger memory access violations in GPU kernels.
-
-\textbf{Library-level fuzzers}, such as LEMON~\cite{wang2020deep}, test DL library implementations by generating model variants to detect inconsistencies across different libraries. While effective for finding library-specific bugs, they operate at a higher abstraction level and are not designed to systematically probe the low-level memory access patterns within GPU kernels.
-
-\textbf{API-level fuzzers}, such as Orion~\cite{harzevili2025history}, test the API layer by generating test inputs guided by historical bug patterns. While effective for detecting API-level crashes and certain classes of bugs, they typically cannot uncover silent memory errors that occur at a lower level and are only visible via specialized tools like compute-sanitizer.
-
-In contrast, \textsc{GPU-Fuzz} is a \textbf{parameter-level fuzzer}. It complements existing work by focusing on individual operators and systematically exploring their parameter boundary conditions. This targeted approach is effective at uncovering memory safety vulnerabilities within GPU backends that may be missed by other methods.
-
-\subsection{GPU Security}
-Research on GPU security can be categorized into several approaches.
-
-\textbf{Static verification tools}, such as GPUVerify~\cite{betts2012gpuverify}, employ formal methods to verify GPU kernel correctness by detecting data races and barrier divergence. While effective for general-purpose GPU kernels, these tools require source code access and are not tailored to the domain-specific operators used in DL frameworks.
-
-\textbf{Runtime detection tools}, such as iGUARD~\cite{kamath2021iguard}, detect data races during execution through runtime monitoring using binary instrumentation (NVBit). While iGUARD can detect certain memory-related concurrency issues, it requires runtime instrumentation and primarily focuses on data race detection rather than general memory access violations such as out-of-bounds access.
-
-\textbf{Compiler fuzzers}, such as DeepSmith~\cite{cummins2018compiler}, generate random CUDA C programs from scratch to stress-test the CUDA compiler (\texttt{nvcc})~\cite{guide2020cuda} itself. In contrast, \textsc{GPU-Fuzz} does not generate new CUDA code; instead, it tests the existing, domain-specific, and highly-optimized CUDA kernels that are handwritten by framework developers to implement core DL operators.
-
-\textbf{Multi-tenant security research}, such as Guardian~\cite{pavlidakis2024guardian}, focuses on providing memory isolation in multi-tenant GPU environments. While addressing an important security concern, these approaches do not directly detect memory errors within individual kernels.
-
-\textsc{GPU-Fuzz} bridges the gap between high-level DL applications and low-level GPU execution by using the frameworks' own operators as the entry point to stress-test the underlying kernels for memory safety. Unlike static verification tools, \textsc{GPU-Fuzz} requires no source code access and works directly with compiled frameworks. Unlike runtime detection tools, it uses external oracles (compute-sanitizer) without modifying the runtime environment. Unlike compiler fuzzers, it targets domain-specific DL operators rather than generic CUDA programs.
+In contrast, \textsc{GPU-Fuzz} differs from this previous work. Instead of generating entire models like NNSmith~\cite{liu2023nnsmith} or entire CUDA programs like DeepSmith~\cite{cummins2018compiler}, it focuses on parameter space fuzzing of existing DL operators to uncover bugs at the kernel level.

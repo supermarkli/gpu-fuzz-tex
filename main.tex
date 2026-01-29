@@ -9,6 +9,7 @@
 \renewcommand{\figurename}{Fig.}
 \renewcommand{\tablename}{Tab.}
 \usepackage{subcaption}
+
 \begin{document}
 
 \title{GPU-Fuzz: Finding Memory Errors in Deep Learning Frameworks}
@@ -16,8 +17,9 @@
 \author{}
 
 \begin{abstract}
-  GPU memory errors are a critical threat to deep learning (DL) frameworks, leading to crashes or even security issues. We introduce \textsc{GPU-Fuzz}, a fuzzer addressing this issue by modeling operator parameters as formal constraints. \textsc{GPU-Fuzz} utilizes a constraint solver to generate test cases that systematically probe error-prone boundary conditions in GPU kernels. Applied to PyTorch, TensorFlow, and PaddlePaddle, we uncovered 13 unknown bugs, which demonstrate the effectiveness of \textsc{GPU-Fuzz} in finding memory errors.
+  GPU memory errors are a critical threat to deep learning (DL) frameworks, leading to crashes or even security issues. We introduce \textsc{GPU-Fuzz}, a fuzzer locating these issues efficiently by modeling operator parameters as formal constraints. \textsc{GPU-Fuzz} utilizes a constraint solver to generate test cases that systematically probe error-prone boundary conditions in GPU kernels. Applied to PyTorch, TensorFlow, and PaddlePaddle, we uncovered 13 unknown bugs, demonstrating the effectiveness of \textsc{GPU-Fuzz} in finding memory errors.
   \end{abstract}
+  
 \maketitle
 
 
@@ -28,7 +30,7 @@
 \input{./files/5_eval.tex}
 \input{./files/6_discussion.tex}
 \input{./files/7_related_work.tex}
-% \input{./files/8_disclosure.tex}
+\input{./files/8_disclosure.tex}
 \input{./files/9_conclusion.tex}
 
 
@@ -36,7 +38,6 @@
 \bibliography{ref}
 
 \appendix
-\input{./files/appendix.tex}
+% \input{./files/appendix.tex}
 
 \end{document}
-\endinput

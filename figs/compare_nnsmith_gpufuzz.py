@@ -11,7 +11,8 @@ import numpy as np
 from pathlib import Path
 
 # 设置字体
-plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+plt.rcParams['font.family'] = 'serif'
+plt.rcParams['font.serif'] = ['Times New Roman']
 plt.rcParams['axes.unicode_minus'] = False
 
 def analyze_gpufuzz_logs(log_dir):
@@ -176,118 +177,54 @@ def analyze_nnsmith_results(bug_dir, log_file):
     return stats
 
 def plot_comparison(nnsmith_stats, gpufuzz_stats):
-    """生成对比图表"""
+    """生成对比图表（仅饼图）"""
     
-    # 1. Bug发现数量对比（排除OOM）
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-    
-    # 子图1: Bug数量对比（柱状图）
-    ax1 = axes[0, 0]
-    tools = ['NNSmith', 'GPU-Fuzz']
-    # GPU-Fuzz排除OOM错误，只统计真实的内存错误和配置错误
-    gpufuzz_real_bugs = gpufuzz_stats['memory_errors'] + gpufuzz_stats['config_errors']
-    bug_counts = [nnsmith_stats['total_bugs'], gpufuzz_real_bugs]
-    colors = ['#808080', '#404040']
-    
-    bars = ax1.bar(tools, bug_counts, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5, width=0.5)
-    for bar in bars:
-        height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
-                f'{int(height)}', ha='center', va='bottom', fontsize=14, fontweight='bold')
-    
-    ax1.set_ylabel('Number of Bugs Found', fontsize=14)
-    ax1.set_title('(a) Total Bugs Discovered', fontsize=14, fontweight='bold', pad=10)
-    ax1.grid(axis='y', alpha=0.3, linestyle='--')
-    ax1.set_ylim(0, max(bug_counts) * 1.2)
-    
-    # 子图2: 内存错误对比（重点）
-    ax2 = axes[0, 1]
-    nnsmith_memory = nnsmith_stats['bug_types'].get('INCONSISTENCY', 0)  # 假设INCONSISTENCY包含内存错误
-    gpufuzz_memory = gpufuzz_stats['memory_errors']
-    memory_counts = [nnsmith_memory, gpufuzz_memory]
-    
-    bars = ax2.bar(tools, memory_counts, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5, width=0.5)
-    for bar in bars:
-        height = bar.get_height()
-        ax2.text(bar.get_x() + bar.get_width()/2., height,
-                f'{int(height)}', ha='center', va='bottom', fontsize=14, fontweight='bold')
-    
-    ax2.set_ylabel('Number of Memory Errors', fontsize=14)
-    ax2.set_title('(b) Memory Errors (Critical)', fontsize=14, fontweight='bold', pad=10)
-    ax2.grid(axis='y', alpha=0.3, linestyle='--')
-    ax2.set_ylim(0, max(memory_counts) * 1.2 if memory_counts else 1)
-    
-    # 子图3: 测试用例生成效率对比
-    ax3 = axes[1, 0]
-    nnsmith_tc = nnsmith_stats['total_testcases']
-    gpufuzz_tc = gpufuzz_stats['total_testcases']  # 使用实际测试用例数，不是日志文件数
-    tc_counts = [nnsmith_tc, gpufuzz_tc]
-    
-    bars = ax3.bar(tools, tc_counts, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5, width=0.5)
-    for bar in bars:
-        height = bar.get_height()
-        ax3.text(bar.get_x() + bar.get_width()/2., height,
-                f'{int(height)}', ha='center', va='bottom', fontsize=14, fontweight='bold')
-    
-    ax3.set_ylabel('Number of Test Cases', fontsize=14)
-    ax3.set_title('(c) Test Cases Generated', fontsize=14, fontweight='bold', pad=10)
-    ax3.grid(axis='y', alpha=0.3, linestyle='--')
-    ax3.set_ylim(0, max(tc_counts) * 1.2)
-    
-    # 子图4: Bug发现率对比（bugs per 1000 testcases）
-    ax4 = axes[1, 1]
-    nnsmith_rate = (nnsmith_stats['total_bugs'] / nnsmith_stats['total_testcases'] * 1000) if nnsmith_stats['total_testcases'] > 0 else 0
-    gpufuzz_rate = (gpufuzz_real_bugs / gpufuzz_stats['total_testcases'] * 1000) if gpufuzz_stats['total_testcases'] > 0 else 0
-    rates = [nnsmith_rate, gpufuzz_rate]
-    
-    bars = ax4.bar(tools, rates, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5, width=0.5)
-    for bar in bars:
-        height = bar.get_height()
-        ax4.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.1f}', ha='center', va='bottom', fontsize=14, fontweight='bold')
-    
-    ax4.set_ylabel('Bugs per 1000 Test Cases', fontsize=14)
-    ax4.set_title('(d) Bug Discovery Rate', fontsize=14, fontweight='bold', pad=10)
-    ax4.grid(axis='y', alpha=0.3, linestyle='--')
-    ax4.set_ylim(0, max(rates) * 1.2 if rates else 1)
-    
-    plt.tight_layout()
-    plt.savefig('compare_nnsmith_gpufuzz.pdf', dpi=300, bbox_inches='tight')
-    print("Saved: compare_nnsmith_gpufuzz.pdf")
-    plt.close()
-    
-    # 2. Bug类型分布对比
+    # Bug类型分布对比（饼图）
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     
-    # NNSmith的bug类型
+    # NNSmith的bug类型（饼图）
     ax1 = axes[0]
     nnsmith_types = list(nnsmith_stats['bug_types'].keys())
     nnsmith_counts = list(nnsmith_stats['bug_types'].values())
-    colors_nn = ['#808080', '#A0A0A0']
-    bars1 = ax1.bar(nnsmith_types, nnsmith_counts, color=colors_nn[:len(nnsmith_types)], 
-                    alpha=0.8, edgecolor='black', linewidth=1.2)
-    for bar in bars1:
-        height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
-                f'{int(height)}', ha='center', va='bottom', fontsize=12, fontweight='bold')
-    ax1.set_ylabel('Number of Bugs', fontsize=12)
-    ax1.set_title('NNSmith: Bug Types', fontsize=12, fontweight='bold')
-    ax1.grid(axis='y', alpha=0.3, linestyle='--')
+    colors_nn = ['#808080', '#A0A0A0', '#C0C0C0', '#E0E0E0']
     
-    # GPU-Fuzz的错误类型
+    if nnsmith_counts:
+        wedges, texts, autotexts = ax1.pie(nnsmith_counts, labels=nnsmith_types, 
+                                           colors=colors_nn[:len(nnsmith_types)],
+                                           autopct='%1.1f%%', startangle=90,
+                                           textprops={'fontsize': 12, 'fontweight': 'bold'},
+                                           edgecolor='black', linewidth=1.2)
+        ax1.set_title('NNSmith: Bug Types', fontsize=14, fontweight='bold', pad=10)
+    else:
+        ax1.text(0.5, 0.5, 'No Data', ha='center', va='center', fontsize=14)
+        ax1.set_title('NNSmith: Bug Types', fontsize=14, fontweight='bold', pad=10)
+    
+    # GPU-Fuzz的错误类型（饼图）
     ax2 = axes[1]
     gpufuzz_types = ['Memory Errors', 'Config Errors']
     gpufuzz_counts = [gpufuzz_stats['memory_errors'], gpufuzz_stats['config_errors']]
     colors_gf = ['#404040', '#606060']
-    bars2 = ax2.bar(gpufuzz_types, gpufuzz_counts, color=colors_gf, 
-                    alpha=0.8, edgecolor='black', linewidth=1.2)
-    for bar in bars2:
-        height = bar.get_height()
-        ax2.text(bar.get_x() + bar.get_width()/2., height,
-                f'{int(height)}', ha='center', va='bottom', fontsize=12, fontweight='bold')
-    ax2.set_ylabel('Number of Bugs', fontsize=12)
-    ax2.set_title('GPU-Fuzz: Error Types', fontsize=12, fontweight='bold')
-    ax2.grid(axis='y', alpha=0.3, linestyle='--')
+    
+    # 过滤掉为0的项
+    filtered_types = []
+    filtered_counts = []
+    filtered_colors = []
+    for i, count in enumerate(gpufuzz_counts):
+        if count > 0:
+            filtered_types.append(gpufuzz_types[i])
+            filtered_counts.append(count)
+            filtered_colors.append(colors_gf[i])
+    
+    if filtered_counts:
+        wedges, texts, autotexts = ax2.pie(filtered_counts, labels=filtered_types,
+                                           colors=filtered_colors,
+                                           autopct='%1.1f%%', startangle=90,
+                                           textprops={'fontsize': 12, 'fontweight': 'bold'},
+                                           edgecolor='black', linewidth=1.2)
+        ax2.set_title('GPU-Fuzz: Error Types', fontsize=14, fontweight='bold', pad=10)
+    else:
+        ax2.text(0.5, 0.5, 'No Data', ha='center', va='center', fontsize=14)
+        ax2.set_title('GPU-Fuzz: Error Types', fontsize=14, fontweight='bold', pad=10)
     
     plt.tight_layout()
     plt.savefig('bug_types_comparison.pdf', dpi=300, bbox_inches='tight')

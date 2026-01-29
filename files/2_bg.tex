@@ -2,19 +2,27 @@
 \label{sec:bg}
 
 \subsection{GPU Architecture}
-Modern GPUs are massively parallel processors designed for high-throughput computation. Their architecture is built around a collection of Streaming Multiprocessors (SMs), each capable of executing hundreds of threads concurrently. 
-The CUDA programming model abstracts this hardware~\cite{nickolls2008scalable}, organizing threads into a hierarchy of grids, blocks, and warps. 
-This parallelism is supported by a complex memory hierarchy~\cite{hong2010integrated}, comprising high-bandwidth global memory, low-latency shared memory private to each SM, and per-thread local memory and registers. 
-Writing efficient GPU code requires developers to manually manage data placement and movement across this hierarchy~\cite{guide2020cuda}. 
-The complexity of this task, especially the intricate pointer arithmetic required for optimal memory access patterns, makes GPU kernels highly susceptible to memory errors such as out-of-bounds access and race conditions~\cite{kamath2021iguard}.
+Modern GPUs are massively parallel devices built on Streaming Multiprocessors (SMs), each executing hundreds of threads concurrently~\cite{nickolls2008scalable}.
+This parallelism is supported by a complex memory hierarchy~\cite{kirk2016programming}.
+However, harnessing this hardware for performance requires developers to manually manage data placement and movement~\cite{guide2020cuda}. 
+The complexity of this manual task makes GPU kernels highly susceptible to memory errors such as out-of-bounds access and race conditions~\cite{kamath2021iguard}.
 
 \begin{figure}[htbp]
 	\centering
-	\includegraphics[width=\columnwidth]{figs/gpu.pdf}
-	\caption{GPU architecture and memory layout.}
-	\Description{A diagram illustrating GPU hardware architecture with Streaming Multiprocessors and the memory layout within a Thread Block.}
-	\label{fig:gpu_arch}
+	\includegraphics[width=0.8\columnwidth]{figs/gpu.pdf}
+	\caption{GPU memory layout and potential attacks.}
+	\Description{Common attack vectors targeting GPU memory. (Left) Code tampering modifies kernel instructions in Global Memory. (Right) ROP attacks corrupt the return address (RA) on the thread-private stack in Local Memory.}
+	\label{fig:gpu_attacks}
 \end{figure}
+As illustrated in \F~\ref{fig:gpu_attacks}, these memory errors can be exploited to compromise the kernel's integrity and control flow. The memory spaces most relevant to these attacks are:
+
+\parh{Global Memory.}
+The global memory is a large memory space shared by all threads. It is commonly used to store the kernel's executable instructions and global variables. Since previous works have shown that GPUs do not support W$\oplus$X permission~\cite{guo2024gpu}, an out-of-bounds write vulnerability can allow an attacker to modify the kernel's instructions residing in this shared space, fundamentally altering the program's intended logic.
+
+\parh{Local Memory.}
+Each thread possesses a private local memory space. This thread-local space stores function arguments, local variables, and control-flow data such as the return address. A stack-based buffer overflow, a prevalent type of memory error, can overwrite the saved return address. This vulnerability is the foundation for Return-Oriented Programming (ROP) attacks~\cite{guo2024gpu}, allowing an attacker to hijack the thread's control flow and divert execution to malicious payloads.
+
+The existence of these vulnerabilities highlights the need for robust mechanisms to detect and mitigate memory corruption in GPU kernels.
 
 \subsection{Deep Learning Operators}
 Deep learning (DL) frameworks like PyTorch~\cite{paszke2019pytorch} and TensorFlow~\cite{abadi2016tensorflow} are built around a rich library of fundamental computational units called operators. 
@@ -23,11 +31,13 @@ While users interact with them through simple, high-level Python APIs, the under
 
 \begin{figure}[htbp]
 	\centering
-	\includegraphics[width=0.7\columnwidth]{figs/conv.pdf}
-	\caption{An illustration of a convolution operator.}
-	\Description{A diagram showing how a convolution kernel operates on input data to produce output, demonstrating the fundamental convolution operator in deep learning.}
-	\label{fig:conv}
+	\includegraphics[width=0.9\columnwidth]{figs/operatorcode.pdf}
+	\caption{From Python API to CUDA kernel.}
+	\Description{The figure illustrates how a PyTorch ConvTranspose2d operation with large dimensions triggers a CUDA kernel. Due to an integer overflow in grid dimension calculation, the CUDA kernel threads calculate indices that exceed the valid output buffer bounds, resulting in invalid global memory writes.}
+	\label{fig:operatorcode}
 \end{figure}
+
+As illustrated in \F~\ref{fig:operatorcode}, high-level Python operator calls are translated into low-level CUDA kernel executions, where subtle implementation bugs can lead to various memory errors.
 
 The complexity arises from the vast parameter space of each operator. 
 A single convolution operator~\cite{dumoulin2016guide}, for instance, is governed by a multitude of parameters beyond the input tensor itself: kernel size, stride, padding, dilation, and channel groups. 
@@ -37,10 +47,10 @@ This manual, performance-driven optimization often bypasses safer, high-level ab
 
 \subsection{Motivation}
 GPU memory bugs represent a severe and often silent threat to the reliability and security of AI systems~\cite{papadimitriou2023silent}. 
-These bugs can cause catastrophic failures in mission-critical applications like medical imaging~\cite{ronneberger2015u} and autonomous driving~\cite{lang2019pointpillars}, or be exploited for security attacks~\cite{pavlidakis2024guardian}. 
+These bugs can cause catastrophic failures in mission-critical applications like medical imaging~\cite{ronneberger2015u} and autonomous driving~\cite{lang2019pointpillars}, or be exploited for security attacks~\cite{pavlidakis2024guardian,park2021mind}. 
 
 State-of-the-art DL fuzzers focus on the compiler stack, generating valid neural networks to find bugs~\cite{liu2023nnsmith,ma2023fuzzing}. 
-This network-level approach is ill-suited for finding low-level memory errors in GPU kernels. 
+This approach is ill-suited for finding low-level memory errors in GPU kernels. 
 Such bugs are not typically triggered by network architecture, but by specific, often boundary-value, combinations of an operator's parameters (e.g., tensor shapes, strides). 
 This leaves a fundamental blind spot: existing fuzzers like NNSmith~\cite{liu2023nnsmith}  do not systematically explore the intricate parameter space of individual operators where these memory bugs reside.
 
