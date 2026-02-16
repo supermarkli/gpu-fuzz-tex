@@ -1,0 +1,91 @@
+\documentclass[sigconf]{acmart}
+%%
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    Bib\TeX}}}
+
+\input{./files/util.tex}
+\renewcommand{\figurename}{Fig.}
+\renewcommand{\tablename}{Tab.}
+\usepackage{subcaption}
+
+\begin{document}
+
+\title{GPU-Fuzz: Finding Memory Errors in Deep Learning Frameworks}
+
+\author{Zihao Li}
+\authornote{Zihao Li and Hongyi Lu contributed equally to this work.}
+\affiliation{%
+  \institution{Southern University of Science and Technology}
+  \country{}
+}
+\email{lizh2025@mail.sustech.edu.cn}
+
+\author{Hongyi Lu}
+\authornotemark[1]
+\affiliation{%
+  \institution{Southern University of Science and Technology}
+  \country{}
+}
+\email{luhy2017@mail.sustech.edu.cn}
+
+\author{Yanan Guo}
+\affiliation{%
+  \institution{University of Rochester}
+  \country{}
+}
+\email{yanan.guo@rochester.edu}
+
+\author{Zhenkai Zhang}
+\authornote{Corresponding authors.}
+\affiliation{%
+  \institution{Clemson University}
+  \country{}
+}
+\email{zhenkai@clemson.edu}
+
+\author{Shuai Wang}
+\authornotemark[2]
+\affiliation{%
+  \institution{Hong Kong University of Science and Technology}
+  \country{}
+}
+\email{shuaiw@cse.ust.hk}
+
+\author{Fengwei Zhang}
+\authornotemark[2]
+\affiliation{%
+  \institution{Southern University of Science and Technology}
+  \country{}
+}
+\email{zhangfw@sustech.edu.cn}
+
+\begin{abstract}
+  GPU memory errors are a critical threat to deep learning (DL) frameworks, leading to crashes or even security issues. We introduce \textsc{GPU-Fuzz}, a fuzzer locating these issues efficiently by modeling operator parameters as formal constraints. \textsc{GPU-Fuzz} utilizes a constraint solver to generate test cases that systematically probe error-prone boundary conditions in GPU kernels. Applied to PyTorch, TensorFlow, and PaddlePaddle, we uncovered 13 unknown bugs, demonstrating the effectiveness of \textsc{GPU-Fuzz} in finding memory errors.
+  \end{abstract}
+  
+\maketitle
+
+
+\input{./files/1_intro.tex}
+\input{./files/2_bg.tex}
+\input{./files/3_design.tex}
+\input{./files/4_impl.tex}
+\input{./files/5_eval.tex}
+\input{./files/6_discussion.tex}
+\input{./files/7_related_work.tex}
+\input{./files/8_disclosure.tex}
+\input{./files/9_conclusion.tex}
+
+\begin{acks}
+We would like to thank the COMPASS members for their insightful comments. This work is partly supported by the National Natural Science Foundation of China under Grant No. U2541211, No. 62372218, and No. U24A6009. This work was also supported in part by a grant from the Research Grants Council of the Hong Kong Special Administrative Region, China HKUST C6004-25G and an ITF grant under the contract ITS/161/24FP. Dr. Yanan Guo and Dr. Zhenkai Zhang are supported by separate research gifts from HydroX AI, respectively.
+\end{acks}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{ref}
+
+\appendix
+% \input{./files/appendix.tex}
+
+\end{document}

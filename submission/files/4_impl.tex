@@ -1,0 +1,34 @@
+\section{Implementation}
+\label{sec:impl}
+This section details the implementation of the system design described in Section~\ref{sec:design}. Our system is developed in Python and comprises 2,628 lines of code.
+    
+We implemented a library where each operator is represented as a distinct class to realize the operator modeling and constraint-based test case generation concepts described in Section~\ref{sec:design}. This modeling approach was applied to 13 operators (\T~\ref{tab:operators}), chosen for their prevalence in deep learning models and their complex, error-prone memory access patterns.
+
+The translation process (Section~\ref{sec:execution}) is implemented to translate the generated parameter values into framework-specific API calls. When compute-sanitizer~\cite{nvidia2023compsan} detects an error during execution, the system automatically archives the execution logs to ensure reproducibility.
+
+\begin{table}[t]
+    \centering
+    \caption{Supported Operators in \textsc{GPU-Fuzz}}
+    \label{tab:operators}
+    \footnotesize
+    \begin{tabular}{@{}lp{5.0cm}@{}}
+    \toprule
+    \textbf{Operator Family} & \textbf{Specific Operators} \\
+    \midrule
+    Convolution & \makecell[l]{Conv (1d, 2d, 3d), ConvTranspose (1d, 2d, 3d)} \\
+    \midrule
+    Pooling & \makecell[l]{MaxPool (1d, 2d, 3d), AvgPool (1d, 2d, 3d), \\ FractionalMaxPool (2d, 3d), LPPool (1d, 2d, 3d), \\ AdaptiveAvgPool (1d, 2d, 3d),\\ AdaptiveMaxPool (1d, 2d, 3d)} \\
+    \midrule
+    Padding & \makecell[l]{ReflectionPad (1d, 2d, 3d),\\ ReplicationPad (1d, 2d, 3d),\\ ZeroPad (1d, 2d, 3d), ConstantPad (1d, 2d, 3d),\\ CircularPad (1d, 2d, 3d)} \\
+    \midrule
+    Element-Wise Unary & \makecell[l]{Activation: ELU, ReLU, GELU, Sigmoid, Tanh, ...\\ Arithmetic: abs, sin, cos, sqrt, exp, log, ...} \\
+    \midrule
+    Element-Wise Binary & \makecell[l]{add, sub, mul, div, pow, remainder,\\ logaddexp, atan2, ...} \\
+    \midrule
+    Matrix Ops & MatMul, BMM \\
+    \midrule
+    Concat & cat, concat \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+    \vspace{-0.4em}
