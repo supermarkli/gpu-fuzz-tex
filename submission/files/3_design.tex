@@ -5,13 +5,10 @@ This section details the architecture of \textsc{GPU-Fuzz}. As illustrated in \F
 
 \begin{figure}[htbp]
 	\centering
-	\vspace{-0.2em}
 	\includegraphics[width=1\linewidth]{figs/arch}
-	\vspace{-0.4em}
 	\caption{The architecture of the \textsc{GPU-Fuzz} system.}
 	\Description{A diagram illustrating the architecture of the GPU-Fuzz system. }
 	\label{fig:arch}
-	\vspace{-0.2em}
 \end{figure}
 
 \subsection{Operator modeling.}
@@ -79,13 +76,10 @@ This incremental strategy ensures that \textsc{GPU-Fuzz} can continuously and ef
 
 \begin{figure}[htbp]
 	\centering
-	\vspace{-0.2em}
 	\includegraphics[width=\columnwidth]{figs/execution}
-	\vspace{-0.4em}
 	\caption{Cross-framework materialization example.}
 	\Description{A diagram illustrating how a generic model's parameters are materialized into framework-specific API calls for PyTorch, PaddlePaddle, and TensorFlow.}
 	\label{fig:execution}
-	\vspace{-0.2em}
 \end{figure}
 
 Once a valid set of parameters is generated, \textsc{GPU-Fuzz} executes it as a test case across multiple deep learning frameworks, including PyTorch~\cite{paszke2019pytorch}, PaddlePaddle~\cite{ma2019paddlepaddle}, and TensorFlow~\cite{abadi2016tensorflow}, to detect GPU memory bugs. 
@@ -93,4 +87,3 @@ As illustrated in \F~\ref{fig:execution}, this process translates the abstract, 
 For instance, the generic \texttt{outch} parameter is mapped to \texttt{out\_channels} in PyTorch and \texttt{filters} in TensorFlow. 
 To detect memory errors and kernel failures, each execution is wrapped by NVIDIA's compute-sanitizer~\cite{nvidia2023compsan}. 
 This approach significantly improves the detection of memory errors.
-

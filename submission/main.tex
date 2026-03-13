@@ -62,7 +62,33 @@
 \begin{abstract}
   GPU memory errors are a critical threat to deep learning (DL) frameworks, leading to crashes or even security issues. We introduce \textsc{GPU-Fuzz}, a fuzzer locating these issues efficiently by modeling operator parameters as formal constraints. \textsc{GPU-Fuzz} utilizes a constraint solver to generate test cases that systematically probe error-prone boundary conditions in GPU kernels. Applied to PyTorch, TensorFlow, and PaddlePaddle, we uncovered 13 unknown bugs, demonstrating the effectiveness of \textsc{GPU-Fuzz} in finding memory errors.
   \end{abstract}
-  
+
+\keywords{GPU, Fuzzing, Deep Learning}
+
+\begin{CCSXML}
+<ccs2012>
+ <concept>
+  <concept_id>10010147.10010257.10010293.10010294</concept_id>
+  <concept_desc>Computing methodologies~Machine learning</concept_desc>
+  <concept_significance>500</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>10010147.10010257</concept_id>
+  <concept_desc>Computing methodologies~Artificial intelligence</concept_desc>
+  <concept_significance>500</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>10011007.10011006.10011008.10011009</concept_id>
+  <concept_desc>Software and its engineering~Software safety</concept_desc>
+  <concept_significance>500</concept_significance>
+ </concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Computing methodologies~Machine learning}
+\ccsdesc[500]{Computing methodologies~Artificial intelligence}
+\ccsdesc[500]{Software and its engineering~Software safety}
+
 \maketitle
 
 
