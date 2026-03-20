@@ -26,18 +26,112 @@
 
 \title{GPU-Fuzz: Finding Memory Errors in Deep Learning Frameworks}
 
-\author{Zihao Li$^{1,2,*}$, Hongyi Lu$^{1,2,3,*}$, Yanan Guo$^{4}$, Zhenkai Zhang$^{5}$, Shuai Wang$^{3}$, Fengwei Zhang$^{2,1,\dagger}$}
-\email{{lizh2025, luhy2017}@mail.sustech.edu.cn}
-\email{{yanan.guo}@rochester.edu, {zhenkai}@clemson.edu}
-\email{{shuaiw}@cse.ust.hk, {zhangfw}@sustech.edu.cn}
+\author{Zihao Li}
+\authornote{Zihao Li and Hongyi Lu contributed equally to this work.}
 \affiliation{%
-  $^1$\textit{Research Institute of Trustworthy Autonomous Systems, Southern University of Science and Technology} \\
-  $^2$\textit{Department of Computer Science and Engineering, Southern University of Science and Technology} \\
-  $^3$\textit{Department of Computer Science and Engineering, Hong Kong University of Science and Technology} \\
-  $^4$\textit{University of Rochester} \\
-  $^5$\textit{Clemson University} \\
-  \country{}
+  \institution{Research Institute of Trustworthy Autonomous Systems, Southern University of Science and Technology}
+  \city{Shenzhen}
+  \country{China}
 }
+\affiliation{%
+  \institution{Department of Computer Science and Engineering, Southern University of Science and Technology}
+  \city{Shenzhen}
+  \country{China}
+}
+\email{lizh2025@mail.sustech.edu.cn}
+
+\author{Hongyi Lu}
+\authornotemark[1]
+\affiliation{%
+  \institution{Research Institute of Trustworthy Autonomous Systems, Southern University of Science and Technology}
+  \city{Shenzhen}
+  \country{China}
+}
+\affiliation{%
+  \institution{Department of Computer Science and Engineering, Southern University of Science and Technology}
+  \city{Shenzhen}
+  \country{China}
+}
+\affiliation{%
+  \institution{Department of Computer Science and Engineering, Hong Kong University of Science and Technology}
+  \city{Hong Kong}
+  \country{China}
+}
+\email{luhy2017@mail.sustech.edu.cn}
+
+\author{Yanan Guo}
+\affiliation{%
+  \institution{University of Rochester}
+  \city{Rochester}
+  \state{New York}
+  \country{USA}
+}
+\email{yanan.guo@rochester.edu}
+
+\author{Zhenkai Zhang}
+\affiliation{%
+  \institution{Clemson University}
+  \city{Clemson}
+  \state{South Carolina}
+  \country{USA}
+}
+\email{zhenkai@clemson.edu}
+
+\author{Shuai Wang}
+\affiliation{%
+  \institution{Department of Computer Science and Engineering, Hong Kong University of Science and Technology}
+  \city{Hong Kong}
+  \country{China}
+}
+\email{shuaiw@cse.ust.hk}
+
+\author{Fengwei Zhang}
+\authornote{Corresponding author.}
+\affiliation{%
+  \institution{Department of Computer Science and Engineering, Southern University of Science and Technology}
+  \city{Shenzhen}
+  \country{China}
+}
+\affiliation{%
+  \institution{Research Institute of Trustworthy Autonomous Systems, Southern University of Science and Technology}
+  \city{Shenzhen}
+  \country{China}
+}
+\email{zhangfw@sustech.edu.cn}
+
+\makeatletter
+\def\@mkauthors@iii{%
+  \gdef\@currentauthors{}%
+  \gdef\@currentaffiliation{}%
+  \global\setbox\mktitle@bx=\vbox{%
+    \noindent\unvbox\mktitle@bx\par\medskip
+    \centering
+    {\large
+      Zihao Li\textsuperscript{1,2,*},
+      Hongyi Lu\textsuperscript{1,2,3,*},
+      Yanan Guo\textsuperscript{4},
+      Zhenkai Zhang\textsuperscript{5},
+      Shuai Wang\textsuperscript{3},
+      Fengwei Zhang\textsuperscript{2,1,\dagger}\par}%
+    \vspace{0.3em}%
+    {\small
+      \nolinkurl{lizh2025@mail.sustech.edu.cn},
+      \nolinkurl{luhy2017@mail.sustech.edu.cn},
+      \nolinkurl{yanan.guo@rochester.edu}\par
+      \nolinkurl{zhenkai@clemson.edu},
+      \nolinkurl{shuaiw@cse.ust.hk},
+      \nolinkurl{zhangfw@sustech.edu.cn}\par}%
+    \vspace{0.2em}%
+    {{\footnotesize\rmfamily\itshape
+      \textsuperscript{1}Research Institute of Trustworthy Autonomous Systems, Southern University of Science and Technology\par
+      \textsuperscript{2}Department of Computer Science and Engineering, Southern University of Science and Technology\par
+      \textsuperscript{3}Department of Computer Science and Engineering, Hong Kong University of Science and Technology\par
+      \textsuperscript{4}University of Rochester\par
+      \textsuperscript{5}Clemson University\par}}%
+    \vspace{0.4em}%
+  }%
+}
+\makeatother
 
 \begin{abstract}
   GPU memory errors are a critical threat to deep learning (DL) frameworks, leading to crashes or even security issues. We introduce \textsc{GPU-Fuzz}, a fuzzer locating these issues efficiently by modeling operator parameters as formal constraints. \textsc{GPU-Fuzz} utilizes a constraint solver to generate test cases that systematically probe error-prone boundary conditions in GPU kernels. Applied to PyTorch, TensorFlow, and PaddlePaddle, we uncovered 13 unknown bugs, demonstrating the effectiveness of \textsc{GPU-Fuzz} in finding memory errors.
@@ -70,12 +164,6 @@
 \ccsdesc[500]{Software and its engineering~Software safety}
 
 \maketitle
-
-\begingroup
-\renewcommand\thefootnote{}
-\footnotetext{$^*$Zihao Li and Hongyi Lu contributed equally to this work.\\
-$^\dagger$Fengwei Zhang is the corresponding author.}
-\endgroup
 
 
 \input{./files/1_intro.tex}
