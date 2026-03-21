@@ -6,6 +6,7 @@
 - `main.tex`：作者区从单个紧凑 `\author{...}` 块改为 `acmart` 标准逐作者元数据，同时新增 `\@mkauthors@iii` 自定义标题页渲染，以保留上标单位编号、邮箱排版和 `*`/`\dagger` 标记。
 - `main.tex`：将作者区手写 superscript 中的 `\dagger` 改为文本模式可编译的 `\textdagger`，修复 `\maketitle` 触发的 `Missing $ inserted` 编译错误。
 - `main.tex`：将首页作者、邮箱和单位三块文字各增大一个字号，分别调整为 `\Large`、`\normalsize` 和 `\small`。
+- `main.tex`：在参考文献前加入 `\newpage`，使 DAC 2026 Research 的最后一页成为纯参考文献页。
 
 ### 2026-03-19
 
