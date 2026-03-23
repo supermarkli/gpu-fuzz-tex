@@ -1,19 +1,9 @@
-.PHONY: asiaccs.pdf all clean clean-build
+.PHONY: all pdf clean
 
-all: main.pdf
+all: pdf
 
-%.tex: %.raw
-	./raw2tex $< > $@
-
-%.tex: %.dat
-	./dat2tex $< > $@
-
-main.pdf: main.tex
-	latexmk -C && latexmk -pdf -pdflatex="pdflatex -shell-escape -synctex=1 -interaction=nonstopmode -file-line-error" main.tex
-
-# Compile and automatically clean intermediate files after successful build
-clean-build:
-	latexmk -C && latexmk -pdf -pdflatex="pdflatex -shell-escape -synctex=1 -interaction=nonstopmode -file-line-error" main.tex && latexmk -c
+pdf:
+	cd submission && latexmk -pdf -pdflatex='pdflatex -shell-escape -synctex=1 -interaction=nonstopmode -file-line-error' main.tex
 
 clean:
-	latexmk -CA
+	cd submission && latexmk -CA
