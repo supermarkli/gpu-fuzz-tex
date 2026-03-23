@@ -1,10 +1,14 @@
-# TODO：
+### TODO：
   - 等 ACM 分配 DOI/ISBN 后填入即可
+
+### 2026-03-23
+
+- 在 `main.tex` 中引入 `balance` 宏包，并在参考文献前启用双栏平衡，使最后一页参考文献采用均衡分栏排版。
 
 ### 2026-03-20
 
 - `main.tex`：作者区从单个紧凑 `\author{...}` 块改为 `acmart` 标准逐作者元数据，同时新增 `\@mkauthors@iii` 自定义标题页渲染，以保留上标单位编号、邮箱排版和 `*`/`\dagger` 标记。
-- `main.tex`：将作者区手写 superscript 中的 `\dagger` 改为文本模式可编译的 `\textdagger`，修复 `\maketitle` 触发的 `Missing $ inserted` 编译错误。
+- `main.tex`：将作者区手写上标中的 `\dagger` 改为文本模式可编译的 `\textdagger`，修复 `\maketitle` 触发的 `Missing $ inserted` 编译错误。
 - `main.tex`：将首页作者、邮箱和单位三块文字各增大一个字号，分别调整为 `\Large`、`\normalsize` 和 `\small`。
 - `main.tex`：在参考文献前加入 `\newpage`，使 DAC 2026 Research 的最后一页成为纯参考文献页。
 
@@ -17,7 +21,7 @@
 ### 2026-03-17
 
 - 在 `main.tex` 导言区统一设置较小的全局浮动体间距（`\textfloatsep`、`\floatsep`、`\intextsep`），以避免段落间距异常。
-- 添加 DAC 2026 conference metadata：
+- 添加 DAC 2026 会议信息：
   - `\setcopyright{acmcopyright}`
   - `\acmConference[DAC '26]{Proceedings of the 63rd Annual ACM/IEEE Design Automation Conference}{July 26--29, 2026}{Long Beach, CA, USA}`
   - `\acmBooktitle{Proceedings of the 63rd Annual ACM/IEEE Design Automation Conference (DAC '26)}`
@@ -29,5 +33,5 @@
 - 将项目使用的 ACM 模板从系统自带的 `acmart` v2.03 升级为项目本地的 `acmart` v2.16。
 - 在当前目录新增本地模板文件 `acmart.cls` 和 `ACM-Reference-Format.bst`，确保编译优先使用最新 ACM 模板。
 - 最小化清理图表周围的负 `\vspace`，减少模板版式警告并避免依赖手工压缩版面。
-- 在摘要后新增 `keywords`，当前填写为 `GPU, Fuzzing, Deep Learning`。
-- 添加 CCS concepts：Machine learning、Artificial intelligence、Software safety（均为 500 relevance
+- 在摘要后新增关键词，当前填写为 `GPU, Fuzzing, Deep Learning`。
+- 添加 CCS 概念：机器学习、人工智能、软件安全（相关度均为 500）。
