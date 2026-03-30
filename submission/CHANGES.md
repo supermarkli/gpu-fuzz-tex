@@ -1,5 +1,15 @@
-### TODO：
-  - 等 ACM 分配 DOI/ISBN 后填入即可
+### 2026-03-30
+
+- `main.tex`：根据 ACM Publication Release 邮件更新元数据：
+  - 版权从 `acmcopyright` 改为 CC-BY 许可 (`\setcopyright{cc}` + `\setcctype{by}`)
+  - 添加 `\copyrightyear{2026}`
+  - 更新会议名称为 `63rd ACM/IEEE Design Automation Conference`
+  - 更新 booktitle 格式以符合 ACM 要求
+  - 填入 ISBN：`979-8-4007-2254-7/2026/07`
+
+### 2026-03-24
+
+- `main.tex`：补充 ACM 正式 DOI，填写为 `10.1145/3770743.3804266`。
 
 ### 2026-03-23
 
